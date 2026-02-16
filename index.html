@@ -183,17 +183,17 @@ tbody td {
     flex-wrap: wrap;
 }
 
-.transcript-header .back-btn {
-    padding: 4px 12px;
+.filters-bar .back-btn {
+    padding: 2px 8px;
     background: #222;
     border: 1px solid #444;
     color: #ccc;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
-.transcript-header .back-btn:hover { background: #333; }
+.filters-bar .back-btn:hover { background: #333; }
 
 .transcript-meta {
     font-size: 12px;
@@ -232,6 +232,44 @@ tbody td {
     flex-wrap: wrap;
 }
 #scroll-metrics .val { color: #aaa; }
+
+.transcript-search {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.transcript-search input {
+    width: 150px;
+    padding: 2px 6px;
+    background: #000;
+    border: 1px solid #333;
+    color: #ccc;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+}
+.transcript-search input:focus { border-color: #f88; }
+#transcript-search-count {
+    font-size: 11px;
+    color: #777;
+    min-width: 30px;
+    display: none;
+}
+.transcript-search.active #transcript-search-count { display: inline; }
+.transcript-search-nav { display: none; }
+.transcript-search.active .transcript-search-nav { display: inline-flex; }
+.transcript-search-nav button {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 11px;
+    padding: 1px 5px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.transcript-search-nav button:hover { color: #ccc; border-color: #555; }
+mark.search-hit { background: #665500; color: #fff; border-radius: 2px; }
+mark.search-hit.current { background: #f88; color: #000; }
 
 .filters-bar label {
     display: flex;
@@ -538,22 +576,30 @@ tbody td {
 
     <div id="transcript-view">
         <div class="transcript-header">
-            <button class="back-btn" id="back-btn">&larr; Back</button>
             <div class="transcript-meta" id="transcript-meta"></div>
         </div>
         <div class="filters-bar" id="filters-bar">
             <div class="filters-toggles">
+                <button class="back-btn" id="back-btn">&larr;</button>
+                <div class="transcript-search">
+                    <input type="text" id="transcript-search-input" placeholder="Find in transcript...">
+                    <span id="transcript-search-count"></span>
+                    <span class="transcript-search-nav">
+                        <button id="transcript-search-prev" title="Previous">&uarr;</button>
+                        <button id="transcript-search-next" title="Next">&darr;</button>
+                    </span>
+                </div>
                 <label><input type="checkbox" id="filter-all"> All</label>
                 <label><input type="checkbox" id="filter-user" checked> User</label>
-                <label><input type="checkbox" id="filter-assistant" checked> Assistant</label>
+                <label><input type="checkbox" id="filter-assistant" checked> Agent</label>
                 <label><input type="checkbox" id="filter-thinking" checked> Thinking</label>
                 <label><input type="checkbox" id="filter-tools" checked> Tool calls</label>
-                <label><input type="checkbox" id="filter-results" checked> Tool results</label>
-                <label><input type="checkbox" id="filter-agent"> Agent notifications</label>
+                <label><input type="checkbox" id="filter-results" checked> Tool res</label>
+                <label><input type="checkbox" id="filter-agent"> Agent notif</label>
                 <label><input type="checkbox" id="filter-skill"> Skills</label>
                 <label><input type="checkbox" id="filter-plan" checked> Plans</label>
-                <label><input type="checkbox" id="filter-interrupt" checked> Interruptions</label>
-                <label><input type="checkbox" id="filter-continuation"> Continuations</label>
+                <label><input type="checkbox" id="filter-interrupt" checked> Interrupt</label>
+                <label><input type="checkbox" id="filter-continuation"> Cont</label>
             </div>
             <div id="scroll-metrics"></div>
         </div>
@@ -620,7 +666,7 @@ let sessions = [];
 let sortCol = 'started';
 let sortDir = 'desc';
 let searchText = '';
-let fullTextSessionIds = null; // null = no full-text filter; Set = restrict to these
+let fullTextSessionIds = null; // null = no full-text filter; Map session_id -> relevance rank (lower = better)
 let transcriptData = null;
 
 // --- Formatting helpers ---
@@ -879,6 +925,15 @@ function getFilteredSessions() {
     return list;
 }
 
+function sortByRelevance(list) {
+    if (!fullTextSessionIds) return list;
+    return [...list].sort((a, b) => {
+        const ra = fullTextSessionIds.get(a.session_id) || 99;
+        const rb = fullTextSessionIds.get(b.session_id) || 99;
+        return ra - rb;
+    });
+}
+
 function sortSessions(list) {
     const dir = sortDir === 'asc' ? 1 : -1;
     const col = sortCol;
@@ -903,7 +958,7 @@ function sortSessions(list) {
 
 function renderSessionList() {
     const tbody = document.getElementById('session-tbody');
-    const filtered = sortSessions(getFilteredSessions());
+    const filtered = fullTextSessionIds ? sortByRelevance(getFilteredSessions()) : sortSessions(getFilteredSessions());
 
     // Update header classes
     document.querySelectorAll('#session-table thead th').forEach(th => {
@@ -995,13 +1050,26 @@ async function fullTextSearch(query) {
     searchAbort = controller;
     const escaped = query.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     try {
-        const sql = `SELECT DISTINCT data.sessionId::String AS session_id
+        const sql = `SELECT
+    data.sessionId::String AS session_id,
+    min(multiIf(
+        data.type::String = 'user' AND data.isMeta::Bool = false
+            AND dynamicType(data.message.content) = 'String'
+            AND data.message.content::String ILIKE '%${escaped}%', 1,
+        data.type::String = 'assistant'
+            AND toString(data.message.content) NOT LIKE '%"type":"thinking"%'
+            AND toString(data.message.content) ILIKE '%${escaped}%', 2,
+        data.type::String = 'assistant'
+            AND toString(data.message.content) ILIKE '%${escaped}%', 3,
+        4
+    )) AS relevance
 FROM claude_code.raw
 WHERE toString(data.message.content) ILIKE '%${escaped}%'
    OR data.toolUseResult.content::String ILIKE '%${escaped}%'
    OR data.toolUseResult.stdout::String ILIKE '%${escaped}%'
    OR data.toolUseResult.stderr::String ILIKE '%${escaped}%'
-   OR data.summary::String ILIKE '%${escaped}%'`;
+   OR data.summary::String ILIKE '%${escaped}%'
+GROUP BY session_id`;
         const resp = await fetch('http://localhost:8123/', {
             method: 'POST',
             body: sql + ' FORMAT JSON',
@@ -1011,7 +1079,7 @@ WHERE toString(data.message.content) ILIKE '%${escaped}%'
         const json = await resp.json();
         const rows = json.data || [];
         if (controller.signal.aborted) return;
-        fullTextSessionIds = new Set(rows.map(r => r.session_id));
+        fullTextSessionIds = new Map(rows.map(r => [r.session_id, Number(r.relevance)]));
         renderSessionList();
     } catch (e) {
         if (e.name === 'AbortError') return;
@@ -1200,15 +1268,15 @@ function countMessages(data) {
 function updateFilterLabels(counts) {
     const labels = {
         'filter-user': ['User', counts.user],
-        'filter-assistant': ['Assistant', counts.assistant],
-        'filter-thinking': ['Thinking', counts.thinking],
+        'filter-assistant': ['Agent', counts.assistant],
+        'filter-thinking': ['Think', counts.thinking],
         'filter-tools': ['Tool calls', counts.tools],
-        'filter-results': ['Tool results', counts.results],
-        'filter-agent': ['Agent notifications', counts.agent],
+        'filter-results': ['Tool res', counts.results],
+        'filter-agent': ['Agent notif', counts.agent],
         'filter-skill': ['Skills', counts.skill],
         'filter-plan': ['Plans', counts.plan],
-        'filter-interrupt': ['Interruptions', counts.interrupt],
-        'filter-continuation': ['Continuations', counts.continuation],
+        'filter-interrupt': ['Interrupt', counts.interrupt],
+        'filter-continuation': ['Cont\'s', counts.continuation],
     };
     for (const [id, [name, count]] of Object.entries(labels)) {
         const el = document.getElementById(id);
@@ -1390,6 +1458,10 @@ function renderTranscript() {
             if (lastNav) lastNav.classList.add('hidden');
         }
     }
+
+    // Re-apply transcript search if active
+    const searchQuery = document.getElementById('transcript-search-input').value.trim();
+    if (searchQuery.length >= 2) doTranscriptSearch(searchQuery);
 }
 
 function updateStickyOffset() {
@@ -1410,6 +1482,108 @@ document.getElementById('filter-all').addEventListener('change', e => {
 document.getElementById('filters-bar').addEventListener('change', e => {
     if (e.target.id !== 'filter-all') renderTranscript();
 });
+
+// Transcript search
+let transcriptSearchHits = [];
+let transcriptSearchIdx = -1;
+
+function clearTranscriptSearch() {
+    document.querySelectorAll('mark.search-hit').forEach(m => {
+        const parent = m.parentNode;
+        parent.replaceChild(document.createTextNode(m.textContent), m);
+        parent.normalize();
+    });
+    transcriptSearchHits = [];
+    transcriptSearchIdx = -1;
+    document.getElementById('transcript-search-count').textContent = '';
+    document.querySelector('.transcript-search').classList.remove('active');
+}
+
+function doTranscriptSearch(query) {
+    clearTranscriptSearch();
+    if (!query || query.length < 2) return;
+    document.querySelector('.transcript-search').classList.add('active');
+
+    const container = document.getElementById('messages-container');
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const matches = [];
+    const lcQuery = query.toLowerCase();
+
+    // Collect all text nodes with matches
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement.closest('.term-meta-line, .term-nav, .term-prefix')) continue;
+        const text = node.textContent.toLowerCase();
+        if (text.includes(lcQuery)) matches.push(node);
+    }
+
+    // Wrap matches in <mark> tags
+    for (const node of matches) {
+        const text = node.textContent;
+        const frag = document.createDocumentFragment();
+        let lastIdx = 0;
+        const lcText = text.toLowerCase();
+        let pos;
+        while ((pos = lcText.indexOf(lcQuery, lastIdx)) !== -1) {
+            if (pos > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, pos)));
+            const mark = document.createElement('mark');
+            mark.className = 'search-hit';
+            mark.textContent = text.slice(pos, pos + query.length);
+            frag.appendChild(mark);
+            lastIdx = pos + query.length;
+        }
+        if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+        node.parentNode.replaceChild(frag, node);
+    }
+
+    transcriptSearchHits = [...container.querySelectorAll('mark.search-hit')];
+    const countEl = document.getElementById('transcript-search-count');
+    if (transcriptSearchHits.length > 0) {
+        transcriptSearchIdx = 0;
+        highlightCurrentHit();
+        countEl.textContent = `1/${transcriptSearchHits.length}`;
+    } else {
+        countEl.textContent = query.length >= 2 ? '0' : '';
+    }
+}
+
+function highlightCurrentHit() {
+    transcriptSearchHits.forEach((m, i) => m.classList.toggle('current', i === transcriptSearchIdx));
+    if (transcriptSearchHits[transcriptSearchIdx]) {
+        const hit = transcriptSearchHits[transcriptSearchIdx];
+        // Expand collapsed block if needed
+        const content = hit.closest('.term-content');
+        if (content && !content.classList.contains('expanded')) content.classList.add('expanded');
+        const filtersH = document.getElementById('filters-bar')?.offsetHeight || 36;
+        const stickyH = document.getElementById('sticky-prompt')?.offsetHeight || 0;
+        const top = hit.getBoundingClientRect().top + window.scrollY - filtersH - stickyH - 40;
+        window.scrollTo({ top, behavior: 'smooth' });
+    }
+}
+
+function navigateTranscriptSearch(dir) {
+    if (!transcriptSearchHits.length) return;
+    transcriptSearchIdx = (transcriptSearchIdx + dir + transcriptSearchHits.length) % transcriptSearchHits.length;
+    highlightCurrentHit();
+    document.getElementById('transcript-search-count').textContent = `${transcriptSearchIdx + 1}/${transcriptSearchHits.length}`;
+}
+
+let transcriptSearchTimer = null;
+document.getElementById('transcript-search-input').addEventListener('input', e => {
+    clearTimeout(transcriptSearchTimer);
+    transcriptSearchTimer = setTimeout(() => doTranscriptSearch(e.target.value.trim()), 200);
+});
+document.getElementById('transcript-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        navigateTranscriptSearch(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Escape') {
+        e.target.value = '';
+        clearTranscriptSearch();
+    }
+});
+document.getElementById('transcript-search-prev').addEventListener('click', () => navigateTranscriptSearch(-1));
+document.getElementById('transcript-search-next').addEventListener('click', () => navigateTranscriptSearch(1));
 
 // Click to expand/collapse scrollable blocks, and prev/next navigation
 document.getElementById('messages-container').addEventListener('click', e => {
@@ -1498,7 +1672,7 @@ function buildCumulativeMetrics() {
     cumulativeMetrics = new Array(transcriptData.length);
     let time0 = null;
     let apiMs = 0, inTok = 0, outTok = 0, cacheRead = 0, cacheCreate = 0;
-    let userPrompts = 0, assistantMsgs = 0, compactions = 0, plans = 0;
+    let userPrompts = 0, assistantMsgs = 0, thoughts = 0, tools = 0, compactions = 0, plans = 0;
     for (let i = 0; i < transcriptData.length; i++) {
         const msg = transcriptData[i];
         const ts = msg.ts ? new Date(msg.ts.replace(' ', 'T')) : null;
@@ -1520,6 +1694,8 @@ function buildCumulativeMetrics() {
             cacheCreate += Number(msg.cache_creation_tokens) || 0;
             const cl = classifyMessage(msg);
             if (cl.hasText) assistantMsgs++;
+            thoughts += cl.thinkingCount;
+            tools += cl.toolUseCount;
         }
         // User prompts (real user messages)
         if (msg.type === 'user') {
@@ -1529,7 +1705,7 @@ function buildCumulativeMetrics() {
         }
 
         const elapsed = (ts && time0) ? Math.round((ts - time0) / 1000) : 0;
-        cumulativeMetrics[i] = { elapsed, apiMs, inTok, outTok, cacheRead, cacheCreate, userPrompts, assistantMsgs, compactions, plans };
+        cumulativeMetrics[i] = { elapsed, apiMs, inTok, outTok, cacheRead, cacheCreate, userPrompts, assistantMsgs, thoughts, tools, compactions, plans };
     }
 }
 
@@ -1572,10 +1748,12 @@ function updateScrollMetrics() {
     metricsEl.style.display = 'flex';
     metricsEl.innerHTML =
         `<span>\u23F1 <span class="val">${formatDuration(m.elapsed)}</span></span>` +
-        `<span>$ <span class="val">${formatCost(cost)}</span></span>` +
+        `<span class="val">${formatCost(cost)}</span>` +
         `<span>\u2193<span class="val">${formatNumber(m.inTok)}</span> \u2191<span class="val">${formatNumber(m.outTok)}</span> \u21CA<span class="val">${formatNumber(m.cacheRead)}</span> \u21C8<span class="val">${formatNumber(m.cacheCreate)}</span></span>` +
         `<span>User <span class="val">${m.userPrompts}</span></span>` +
         `<span>Agent <span class="val">${m.assistantMsgs}</span></span>` +
+        `<span>Thoughts <span class="val">${m.thoughts}</span></span>` +
+        `<span>Tools <span class="val">${m.tools}</span></span>` +
         (m.compactions ? `<span>Compactions <span class="val">${m.compactions}</span></span>` : '') +
         (m.plans ? `<span>Plans <span class="val">${m.plans}</span></span>` : '');
 
@@ -1611,13 +1789,16 @@ function handleRoute() {
     const listView = document.getElementById('session-list-view');
     const transcriptView = document.getElementById('transcript-view');
 
+    const header = document.querySelector('header');
     if (hash.startsWith('session/')) {
         const sessionId = hash.slice(8);
         listView.style.display = 'none';
+        header.style.display = 'none';
         transcriptView.style.display = 'block';
         loadTranscript(sessionId);
     } else {
         listView.style.display = 'block';
+        header.style.display = '';
         transcriptView.style.display = 'none';
     }
 }
