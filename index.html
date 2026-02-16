@@ -9,31 +9,29 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Dark scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #333; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+html { scrollbar-color: #333 #111; }
+
 :root {
-    --bg: #ffffff;
-    --bg-surface: #f8f9fa;
-    --bg-hover: #e9ecef;
-    --border: #dee2e6;
-    --text: #212529;
-    --text-dim: #6c757d;
-    --text-bright: #000000;
-    --accent: #0d6efd;
-    --accent-dim: #6ea8fe;
-    --green: #198754;
+    --bg: #001018;
+    --bg-surface: #111;
+    --bg-hover: #1a1a1a;
+    --border: #333;
+    --text: #ccc;
+    --text-dim: #888;
+    --text-bright: #fff;
+    --accent: #7c9cff;
+    --accent-dim: #5577cc;
+    --green: #2ea06a;
     --red: #dc3545;
-    --yellow: #b45309;
+    --yellow: #d4a017;
     --orange: #e67700;
-    --cyan: #0891b2;
+    --cyan: #22d3ee;
     --purple: #7c3aed;
-    --user-border: #0d6efd;
-    --assistant-border: #198754;
-    --system-border: #adb5bd;
-    --tool-border: #e67700;
-    --agent-border: #6c757d;
-    --skill-border: #6f42c1;
-    --plan-border: #0d9488;
-    --interrupt-border: #dc3545;
-    --continuation-border: #adb5bd;
 }
 
 body {
@@ -47,7 +45,7 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.container { max-width: 1600px; margin: 0 auto; padding: 16px; }
+.container { margin: 0 auto; padding: 16px; }
 
 header {
     display: flex;
@@ -108,7 +106,7 @@ header h1 {
 
 /* Session List */
 #session-list-view { display: block; }
-#transcript-view { display: none; }
+#transcript-view { display: none; background: #001018; color: #ccc; margin: -16px; padding: 0; }
 
 .table-wrap { overflow-x: auto; }
 
@@ -172,47 +170,51 @@ tbody td {
 .col-cost { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; color: var(--yellow); }
 .col-model { white-space: nowrap; font-size: 11px; color: var(--text-dim); }
 
-/* Transcript View */
+/* Transcript View — terminal look */
 .transcript-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
+    padding: 8px 16px;
+    background: #111;
+    border-bottom: 1px solid #222;
     flex-wrap: wrap;
 }
 
 .transcript-header .back-btn {
     padding: 4px 12px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-
-    color: var(--text);
+    background: #222;
+    border: 1px solid #444;
+    color: #ccc;
     cursor: pointer;
     font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
-.transcript-header .back-btn:hover { background: var(--bg-hover); }
+.transcript-header .back-btn:hover { background: #333; }
 
 .transcript-meta {
     font-size: 12px;
-    color: var(--text-dim);
+    color: #888;
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
-.transcript-meta .label { color: var(--text-dim); }
-.transcript-meta .val { color: var(--text-bright); }
+.transcript-meta .label { color: #888; }
+.transcript-meta .val { color: #ccc; }
 
 .filters-bar {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 16px;
-    padding: 8px 12px;
-    background: var(--bg-surface);
-
-    border: 1px solid var(--border);
+    margin-bottom: 0;
+    padding: 8px 16px;
+    background: #111;
+    border-bottom: 1px solid #222;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
 .filters-bar label {
@@ -220,150 +222,165 @@ tbody td {
     align-items: center;
     gap: 4px;
     font-size: 12px;
-    color: var(--text-dim);
+    color: #888;
     cursor: pointer;
     user-select: none;
 }
 
-.filters-bar input[type="checkbox"] { accent-color: var(--accent); }
+.filters-bar input[type="checkbox"] { accent-color: #f88; }
 
-.messages { display: flex; flex-direction: column; gap: 8px; }
-
-.message-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-
-    border-left: 3px solid var(--system-border);
-    overflow: hidden;
-}
-
-.message-card.type-user { border-left-color: var(--user-border); }
-.message-card.type-assistant { border-left-color: var(--assistant-border); }
-.message-card.type-system { border-left-color: var(--system-border); }
-.message-card.type-tool_result { border-left-color: var(--tool-border); }
-.message-card.type-thinking { border-left-color: var(--purple); }
-.message-card.type-tool_use { border-left-color: var(--orange); }
-.message-card.type-agent_notification { border-left-color: var(--agent-border); }
-.message-card.type-skill { border-left-color: var(--skill-border); }
-.message-card.type-plan { border-left-color: var(--plan-border); }
-.message-card.type-interrupt { border-left-color: var(--interrupt-border); }
-.message-card.type-continuation { border-left-color: var(--continuation-border); }
-.message-card.sidechain { opacity: 0.6; }
-
-.msg-header {
+.messages {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: rgba(0,0,0,0.04);
-    font-size: 12px;
-    color: var(--text-dim);
-    flex-wrap: wrap;
-}
-
-.msg-role {
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.msg-role.user { color: var(--user-border); }
-.msg-role.assistant { color: var(--assistant-border); }
-.msg-role.thinking { color: var(--purple); }
-.msg-role.tool_use { color: var(--orange); }
-.msg-role.tool_result { color: var(--tool-border); }
-.msg-role.agent_notification { color: var(--agent-border); }
-.msg-role.skill { color: var(--skill-border); }
-.msg-role.plan { color: var(--plan-border); }
-.msg-role.interrupt { color: var(--interrupt-border); }
-.msg-role.continuation { color: var(--continuation-border); }
-.msg-role.system { color: var(--text-dim); }
-
-.msg-model { color: var(--text-dim); font-size: 11px; }
-.msg-tokens { font-size: 11px; color: var(--text-dim); margin-left: auto; }
-
-.msg-body { padding: 10px 12px; }
-
-.type-thinking .msg-body {
-    font-size: 13px;
-    color: var(--purple);
-    white-space: pre-wrap;
-    word-break: break-word;
+    flex-direction: column;
+    gap: 0;
+    background: #001018;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #e0e0e0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+/* Terminal message blocks */
+.term-block {
+    border-bottom: 1px solid #111;
+    padding: 0 0.5em 1em 0.5em;
+}
+
+.term-block.sidechain { opacity: 0.5; }
+
+/* User prompt */
+.term-block.type-user {
+    background: #111;
+    font-size: 120%;
+}
+
+.term-block.type-user .term-prefix {
+    color: #f88;
+    font-weight: bold;
+}
+
+.term-block.type-user .term-content {
+    color: #fff;
+    font-weight: bold;
+}
+
+.term-block.type-assistant .term-content {
+    color: #e0e0e0;
+}
+
+.term-block.type-thinking .term-prefix {
+    color: #555;
+    font-style: italic;
+}
+
+.term-block.type-thinking .term-content {
+    color: #555;
+    font-style: italic;
     max-height: 400px;
     overflow-y: auto;
 }
 
-.type-tool_use .msg-body {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    font-size: 12px;
-    color: var(--text-dim);
-    white-space: pre-wrap;
-    word-break: break-word;
+.term-block.type-tool_use .term-prefix {
+    color: #e67700;
+}
+
+.term-block.type-tool_use .term-content {
+    color: #888;
     max-height: 300px;
     overflow-y: auto;
 }
 
-.type-tool_result .msg-body {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
+/* Tool result */
+.term-block.type-tool_result {
+    background: #000;
+}
+
+.term-block.type-tool_result .term-prefix {
+    color: #888;
+}
+
+.term-block.type-tool_result .term-content {
+    color: #666;
     max-height: 300px;
     overflow-y: auto;
-    color: var(--text-dim);
 }
 
-.content-block { margin-bottom: 8px; }
-.content-block:last-child { margin-bottom: 0; }
+/* System / progress */
+.term-block.type-system .term-content,
+.term-block.type-progress .term-content {
+    color: #555;
+    font-style: italic;
+}
 
-.block-text {
+/* Special user subtypes */
+.term-block.type-agent_notification .term-prefix { color: #555; }
+.term-block.type-agent_notification .term-content { color: #666; }
+.term-block.type-skill .term-prefix { color: #6f42c1; }
+.term-block.type-skill .term-content { color: #888; }
+.term-block.type-plan .term-prefix { color: #0d9488; }
+.term-block.type-plan .term-content { color: #888; }
+.term-block.type-interrupt .term-prefix { color: #dc3545; }
+.term-block.type-interrupt .term-content { color: #dc3545; }
+.term-block.type-continuation .term-prefix { color: #555; }
+.term-block.type-continuation .term-content { color: #666; }
+
+/* Summary */
+.term-block.type-summary {
+    padding: 8px 16px;
+    background: #0a1a0a;
+    border-left: 3px solid #198754;
+}
+
+.term-block.type-summary .term-prefix { color: #198754; font-weight: bold; }
+.term-block.type-summary .term-content { color: #2ea06a; }
+
+/* Content padding */
+.term-content {
+    padding: 0 0.5rem;
+}
+
+/* Token/meta info — right-aligned line above content */
+.term-meta-line {
+    text-align: right;
+    padding: 0 0.5rem;
+    font-size: 11px;
+}
+
+.term-meta {
+    display: inline-flex;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.term-meta .meta-model { color: #888; }
+.term-meta .meta-tokens { color: #777; }
+.term-meta .meta-time { color: #555; }
+.term-meta .meta-sidechain { color: #e67700; }
+
+/* Markdown inside terminal */
+.term-md {
     word-break: break-word;
-    font-size: 13px;
-    line-height: 1.6;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
-.block-text p { margin: 0.4em 0; }
-.block-text p:first-child { margin-top: 0; }
-.block-text p:last-child { margin-bottom: 0; }
-.block-text pre { background: rgba(0,0,0,0.05); padding: 8px 10px; overflow-x: auto; margin: 0.5em 0; }
-.block-text code { background: rgba(0,0,0,0.05); padding: 1px 4px; font-size: 12px; }
-.block-text pre code { background: none; padding: 0; }
-.block-text ul, .block-text ol { margin: 0.4em 0; padding-left: 1.5em; }
-.block-text h1, .block-text h2, .block-text h3, .block-text h4 { margin: 0.6em 0 0.3em; }
-.block-text h1 { font-size: 1.3em; }
-.block-text h2 { font-size: 1.15em; }
-.block-text h3 { font-size: 1.05em; }
-.block-text blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--text-dim); margin: 0.4em 0; }
-.block-text table { border-collapse: collapse; margin: 0.4em 0; }
-.block-text th, .block-text td { border: 1px solid var(--border); padding: 4px 8px; }
-.block-text img { max-width: 100%; }
-
-
-.block-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    font-weight: 600;
-}
-
-.block-label.thinking-label { color: var(--purple); }
-.block-label.tool-label { color: var(--orange); }
-.block-label.result-label { color: var(--cyan); }
-
-.summary-card {
-    background: rgba(25, 135, 84, 0.06);
-    border: 1px solid rgba(25, 135, 84, 0.2);
-
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    border-left: 3px solid var(--green);
-}
-
-.summary-card .block-label { color: var(--green); }
-.summary-card .block-text { color: var(--green); }
+.term-md p { margin: 0.4em 0; }
+.term-md p:first-child { margin-top: 0; }
+.term-md p:last-child { margin-bottom: 0; }
+.term-md pre { background: #111; padding: 8px 10px; overflow-x: auto; margin: 0.5em 0; border: 1px solid #222; }
+.term-md code { background: #000; padding: 1px 4px; color: #CC8; }
+.term-md pre code { background: none; padding: 0; }
+.term-md ul, .term-md ol { margin: 0.4em 0; padding-left: 1.5em; }
+.term-md h1, .term-md h2, .term-md h3, .term-md h4 { margin: 0.6em 0 0.3em; color: #fff; font-weight: bold; }
+.term-md h1 { font-size: 1.3em; }
+.term-md h2 { font-size: 1.15em; }
+.term-md h3 { font-size: 1.05em; }
+.term-md blockquote { border-left: 3px solid #222; padding-left: 10px; color: #888; margin: 0.4em 0; }
+.term-md table { border-collapse: collapse; margin: 0.4em 0; }
+.term-md th, .term-md td { border: 1px solid #222; padding: 4px 8px; }
+.term-md a { color: #7c9cff; }
+.term-md strong { color: #fff; }
+.term-md img { max-width: 100%; }
 
 .hidden { display: none !important; }
 
@@ -374,11 +391,10 @@ tbody td {
 }
 
 .error-msg {
-    background: rgba(220, 53, 69, 0.08);
-    border: 1px solid rgba(220, 53, 69, 0.3);
+    background: rgba(220, 53, 69, 0.15);
+    border: 1px solid rgba(220, 53, 69, 0.4);
     color: var(--red);
     padding: 12px;
-
     margin: 16px 0;
 }
 
@@ -454,8 +470,8 @@ tbody td {
             <label><input type="checkbox" id="filter-sidechain"> Sidechain</label>
         </div>
         <div class="messages" id="messages-container"></div>
-        <div id="transcript-loading" class="loading hidden">Loading transcript...</div>
-        <div id="transcript-error" class="error-msg hidden"></div>
+        <div id="transcript-loading" class="hidden" style="text-align:center;padding:40px;color:#555">Loading transcript...</div>
+        <div id="transcript-error" class="hidden" style="color:#dc3545;padding:12px 16px"></div>
     </div>
 </div>
 
@@ -1124,7 +1140,7 @@ function updateFilterLabels(counts) {
 function renderTranscript() {
     const container = document.getElementById('messages-container');
     if (!transcriptData || transcriptData.length === 0) {
-        container.innerHTML = '<div class="empty-state">No messages in this session</div>';
+        container.innerHTML = '<div style="color:#555;text-align:center;padding:60px 20px">No messages in this session</div>';
         return;
     }
 
@@ -1134,32 +1150,69 @@ function renderTranscript() {
     const filters = getFilters();
     const html = [];
 
+    function metaHtml(msg, isSidechain) {
+        const parts = [];
+        if (msg.model && msg.model !== '<synthetic>') parts.push(`<span class="meta-model">${escapeHtml(shortModel(msg.model))}</span>`);
+        const inTok = Number(msg.input_tokens) || 0;
+        const outTok = Number(msg.output_tokens) || 0;
+        const cacheRead = Number(msg.cache_read_tokens) || 0;
+        if (inTok || outTok) {
+            const t = [];
+            if (inTok) t.push(`\u2193${formatNumber(inTok)}`);
+            if (cacheRead) t.push(`\u21CA${formatNumber(cacheRead)}`);
+            if (outTok) t.push(`\u2191${formatNumber(outTok)}`);
+            parts.push(`<span class="meta-tokens">${t.join(' ')}</span>`);
+        }
+        if (msg.ts) parts.push(`<span class="meta-time">${formatTime(msg.ts)}</span>`);
+        if (isSidechain) parts.push(`<span class="meta-sidechain">[sidechain]</span>`);
+        return parts.length ? `<span class="term-meta">${parts.join('')}</span>` : '';
+    }
+
+    function prependPrefix(prefix, body) {
+        if (!prefix) return body;
+        const tag = `<span class="term-prefix">${prefix} </span>`;
+        // Inject prefix after all leading nested block-level opening tags
+        const m = body.match(/^(\s*<(?:div|p|blockquote|ul|ol|li|h[1-6])[^>]*>)+/i);
+        if (m) return body.slice(0, m[0].length) + tag + body.slice(m[0].length);
+        return tag + body;
+    }
+
+    function emit(type, prefix, body, msg, isSidechain, extraClass) {
+        const cls = `term-block type-${type}${isSidechain ? ' sidechain' : ''}${extraClass ? ' ' + extraClass : ''}`;
+        const meta = metaHtml(msg, isSidechain);
+        const metaLine = meta ? `<div class="term-meta-line">${meta}</div>` : '';
+        html.push(`<div class="${cls}">${metaLine}<div class="term-content">${prependPrefix(prefix, body)}</div></div>`);
+    }
+
+    function renderMd(text) {
+        if (ANSI_RE.test(text)) return `<div style="white-space:pre-wrap">${renderAnsi(text)}</div>`;
+        return `<div class="term-md">${marked.parse(text)}</div>`;
+    }
+
+    function renderToolResult(block) {
+        const text = typeof block.content === 'string' ? block.content :
+            Array.isArray(block.content) ? block.content.map(c => c.text || '').join('\n') :
+            JSON.stringify(block.content);
+        return `<div style="white-space:pre-wrap">${renderAnsi(text)}</div>`;
+    }
+
     for (const msg of transcriptData) {
         const cl = classifyMessage(msg);
+        const isSidechain = cl.isSidechain;
 
-        // Filter sidechain
-        if (cl.isSidechain && !filters.sidechain) continue;
-
-        // Filter by type
+        if (isSidechain && !filters.sidechain) continue;
         if (cl.category === 'progress' && !filters.progress) continue;
         if (cl.category === 'system' && !filters.system) continue;
         if (cl.category === 'skip') continue;
 
-        // Summary type
+        // Summary
         if (cl.category === 'summary' && msg.summary) {
-            html.push(`
-                <div class="summary-card">
-                    <div class="block-label">Session Summary</div>
-                    <div class="block-text">${escapeHtml(msg.summary)}</div>
-                </div>
-            `);
+            emit('summary', '\u2588 Summary', escapeHtml(msg.summary), msg, isSidechain);
             continue;
         }
 
-        if (cl.category !== 'user' && cl.category !== 'assistant' && cl.category !== 'tool_result' && cl.category !== 'agent_notification' && cl.category !== 'skill' && cl.category !== 'plan' && cl.category !== 'interrupt' && cl.category !== 'continuation' && cl.category !== 'system' && cl.category !== 'progress') continue;
-
-        const blocks = cl.blocks;
-        const cardType = cl.category;
+        const validCategories = ['user','assistant','tool_result','agent_notification','skill','plan','interrupt','continuation','system','progress'];
+        if (!validCategories.includes(cl.category)) continue;
 
         // Apply filters
         if (cl.category === 'tool_result' && !filters.results) continue;
@@ -1170,103 +1223,77 @@ function renderTranscript() {
         if (cl.category === 'continuation' && !filters.continuation) continue;
         if (cl.category === 'user' && !filters.user) continue;
 
-        const isSidechain = cl.isSidechain;
-        const roleLabelMap = { tool_result: 'tool result', agent_notification: 'agent notification', interrupt: 'interruption' };
-        const roleClass = cl.category;
-        const roleLabel = roleLabelMap[cl.category] || cl.category;
+        const blocks = cl.blocks;
 
-        // Token display
-        let tokenInfo = '';
-        const inTok = Number(msg.input_tokens) || 0;
-        const outTok = Number(msg.output_tokens) || 0;
-        const cacheRead = Number(msg.cache_read_tokens) || 0;
-        if (inTok || outTok) {
-            const parts = [];
-            if (inTok) parts.push(`in: ${formatNumber(inTok)}`);
-            if (cacheRead) parts.push(`cache: ${formatNumber(cacheRead)}`);
-            if (outTok) parts.push(`out: ${formatNumber(outTok)}`);
-            tokenInfo = parts.join(' | ');
-        }
-
-        const sideTag = isSidechain ? '<span style="color:var(--orange)">[sidechain]</span>' : '';
-        const modelTag = msg.model && msg.model !== '<synthetic>' ? `<span class="msg-model">${escapeHtml(shortModel(msg.model))}</span>` : '';
-        const timeTag = `<span class="col-time">${formatTime(msg.ts)}</span>`;
-        const tokenTag = tokenInfo ? `<span class="msg-tokens">${tokenInfo}</span>` : '';
-
-        function emitCard(cType, rClass, rLabel, body, extraHeader) {
-            html.push(`<div class="message-card type-${cType}${isSidechain ? ' sidechain' : ''}"><div class="msg-header"><span class="msg-role ${rClass}">${escapeHtml(rLabel)}</span>${extraHeader || ''}${timeTag}${sideTag}${tokenTag}</div><div class="msg-body">${body}</div></div>`);
-        }
-
-        // For assistant messages, emit each block as its own card
+        // Assistant: emit each sub-block separately
         if (msg.type === 'assistant') {
             let textParts = [];
             for (const block of blocks) {
                 if (block.type === 'thinking' && block.thinking) {
-                    // Flush accumulated text
                     if (textParts.length && filters.assistant) {
-                        emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+                        emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
                         textParts = [];
                     }
                     if (!filters.thinking) continue;
-                    emitCard('thinking', 'thinking', 'thinking', escapeHtml(block.thinking), modelTag);
+                    emit('thinking', '\u{1F4AD}', `<div style="white-space:pre-wrap">${escapeHtml(block.thinking)}</div>`, msg, isSidechain);
                 } else if (block.type === 'text' && block.text) {
-                    if (ANSI_RE.test(block.text)) {
-                        textParts.push(`<div class="content-block block-text" style="white-space:pre-wrap">${renderAnsi(block.text)}</div>`);
-                    } else {
-                        textParts.push(`<div class="content-block block-text">${marked.parse(block.text)}</div>`);
-                    }
+                    textParts.push(renderMd(block.text));
                 } else if (block.type === 'tool_use') {
-                    // Flush accumulated text
                     if (textParts.length && filters.assistant) {
-                        emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+                        emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
                         textParts = [];
                     }
                     if (!filters.tools) continue;
-                    emitCard('tool_use', 'tool_use', 'tool use: ' + (block.name || 'tool'), renderToolInput(block.input), modelTag);
+                    const toolName = block.name || 'tool';
+                    const toolBody = `<div style="white-space:pre-wrap">${renderToolInput(block.input)}</div>`;
+                    emit('tool_use', `\u25CF ${escapeHtml(toolName)}`, toolBody, msg, isSidechain);
                 }
             }
-            // Flush remaining text
             if (textParts.length && filters.assistant) {
-                emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+                emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
             }
             continue;
         }
 
-        // Non-assistant messages: render as a single card
+        // User messages and subtypes
+        const prefixMap = {
+            user:               '\u276F',
+            tool_result:        '',
+            agent_notification: '\u25CB agent',
+            skill:              '\u25CB skill',
+            plan:               '\u25CB plan',
+            interrupt:          '\u2716',
+            continuation:       '\u2026',
+            system:             '\u2022',
+            progress:           '\u2022',
+        };
+        const prefix = prefixMap[cl.category] || '';
+
         let bodyHtml = '';
         for (const block of blocks) {
             if (block.type === 'text' && block.text) {
-                if (ANSI_RE.test(block.text)) {
-                    bodyHtml += `<div class="content-block block-text" style="white-space:pre-wrap">${renderAnsi(block.text)}</div>`;
-                } else {
-                    bodyHtml += `<div class="content-block block-text">${marked.parse(block.text)}</div>`;
-                }
+                bodyHtml += renderMd(block.text);
             } else if (block.type === 'tool_result') {
                 if (!filters.results) continue;
-                const resultText = typeof block.content === 'string' ? block.content :
-                    Array.isArray(block.content) ? block.content.map(c => c.text || '').join('\n') :
-                    JSON.stringify(block.content);
-                bodyHtml += renderAnsi(resultText);
+                bodyHtml += renderToolResult(block);
             }
         }
 
-        // For user messages with tool results from the row itself
         if (msg.type === 'user' && (msg.tool_result_content || msg.tool_result_stdout || msg.tool_result_stderr)) {
             if (filters.results) {
                 const parts = [msg.tool_result_content, msg.tool_result_stdout, msg.tool_result_stderr].filter(Boolean);
                 if (parts.length && !bodyHtml) {
-                    bodyHtml += renderAnsi(parts.join('\n'));
+                    bodyHtml += `<div style="white-space:pre-wrap">${renderAnsi(parts.join('\n'))}</div>`;
                 }
             }
         }
 
-        // Skip empty cards
         if (!bodyHtml.trim()) continue;
 
-        emitCard(cardType, roleClass, roleLabel, bodyHtml);
+        emit(cl.category, prefix, bodyHtml, msg, isSidechain);
     }
 
-    container.innerHTML = html.join('') || '<div class="empty-state">No visible messages (adjust filters)</div>';
+    container.innerHTML = html.join('') || '<div style="color:#555;text-align:center;padding:60px 20px">No visible messages (adjust filters)</div>';
 }
 
 // Filter toggles
