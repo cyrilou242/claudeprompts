@@ -665,6 +665,7 @@ async function queryClickHouse(sql) {
 let sessions = [];
 let sortCol = 'started';
 let sortDir = 'desc';
+let sortByUser = false; // true when user clicked a column header during search
 let searchText = '';
 let fullTextSessionIds = null; // null = no full-text filter; Map session_id -> relevance rank (lower = better)
 let transcriptData = null;
@@ -958,7 +959,7 @@ function sortSessions(list) {
 
 function renderSessionList() {
     const tbody = document.getElementById('session-tbody');
-    const filtered = fullTextSessionIds ? sortByRelevance(getFilteredSessions()) : sortSessions(getFilteredSessions());
+    const filtered = (fullTextSessionIds && !sortByUser) ? sortByRelevance(getFilteredSessions()) : sortSessions(getFilteredSessions());
 
     // Update header classes
     document.querySelectorAll('#session-table thead th').forEach(th => {
@@ -1010,6 +1011,7 @@ document.querySelector('#session-table thead').addEventListener('click', e => {
     const th = e.target.closest('th');
     if (!th || !th.dataset.col) return;
     const col = th.dataset.col;
+    sortByUser = true;
     if (sortCol === col) {
         sortDir = sortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -1038,9 +1040,11 @@ document.getElementById('search-input').addEventListener('input', e => {
     searchText = e.target.value.trim();
     if (!searchText) {
         fullTextSessionIds = null;
+        sortByUser = false;
         renderSessionList();
         return;
     }
+    sortByUser = false;
     searchTimeout = setTimeout(() => fullTextSearch(searchText), 400);
 });
 
@@ -1203,6 +1207,39 @@ function renderToolInput(input) {
         }
     }
     return renderAnsi(lines.join('\n'));
+}
+
+function renderEditDiff(input) {
+    const file = input.file_path || '';
+    const oldStr = input.old_string || '';
+    const newStr = input.new_string || '';
+    const oldLines = oldStr ? oldStr.split('\n') : [];
+    const newLines = newStr ? newStr.split('\n') : [];
+    const removed = oldLines.length;
+    const added = newLines.length;
+
+    let html = `<span style="color:#888">${escapeHtml(file)}</span>`;
+    html += `  <span style="color:#f44">-${removed}</span> <span style="color:#4f4">+${added}</span>\n`;
+    for (const line of oldLines) {
+        html += `<span style="color:#f44;opacity:0.8">- ${escapeHtml(line)}</span>\n`;
+    }
+    for (const line of newLines) {
+        html += `<span style="color:#4f4;opacity:0.8">+ ${escapeHtml(line)}</span>\n`;
+    }
+    return html;
+}
+
+function renderWriteSummary(input) {
+    const file = input.file_path || '';
+    const content = input.content || '';
+    const lines = content ? content.split('\n') : [];
+
+    let html = `<span style="color:#888">${escapeHtml(file)}</span>`;
+    html += `  <span style="color:#4f4">+${lines.length} lines</span>\n`;
+    for (const line of lines) {
+        html += `<span style="color:#4f4;opacity:0.8">+ ${escapeHtml(line)}</span>\n`;
+    }
+    return html;
 }
 
 function classifyMessage(msg) {
@@ -1400,7 +1437,14 @@ function renderTranscript() {
                     flushText();
                     if (!filters.tools) continue;
                     const toolName = block.name || 'tool';
-                    const toolBody = `<div style="white-space:pre-wrap">${renderToolInput(block.input)}</div>`;
+                    let toolBody;
+                    if (toolName === 'Edit' && block.input) {
+                        toolBody = `<div style="white-space:pre-wrap">${renderEditDiff(block.input)}</div>`;
+                    } else if (toolName === 'Write' && block.input) {
+                        toolBody = `<div style="white-space:pre-wrap">${renderWriteSummary(block.input)}</div>`;
+                    } else {
+                        toolBody = `<div style="white-space:pre-wrap">${renderToolInput(block.input)}</div>`;
+                    }
                     emit('tool_use', `\u25CF ${escapeHtml(toolName)}`, toolBody, msg, isSidechain);
                 }
             }
