@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alexey Prompts</title>
+<link rel="icon" type="image/jpeg" href="user.jpg">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.2.1/ansi_up.js"></script>
 <style>
@@ -208,8 +209,8 @@ tbody td {
 
 .filters-bar {
     display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 4px;
     margin-bottom: 0;
     padding: 8px 16px;
     background: #111;
@@ -219,6 +220,18 @@ tbody td {
     top: 0;
     z-index: 20;
 }
+.filters-toggles {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+#scroll-metrics {
+    display: none;
+    color: #777;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+#scroll-metrics .val { color: #aaa; }
 
 .filters-bar label {
     display: flex;
@@ -262,14 +275,49 @@ tbody td {
 .term-block.type-user {
     background: #222;
     font-size: 120%;
-    position: sticky;
-    top: var(--filters-height, 36px);
-    z-index: 10;
+    padding-bottom: 0;
 }
+
+/* Sticky prompt mirror */
+#sticky-prompt {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: #222;
+    font-size: 120%;
+    padding: 0 0.5em;
+    border-bottom: 1px solid #111;
+    display: none;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    line-height: 1.5;
+}
+
+#sticky-prompt .term-prefix { color: #f88; font-weight: bold; }
+#sticky-prompt .term-content { color: #fff; font-weight: bold; max-height: 4.5em; overflow: hidden; cursor: pointer; padding: 0 0.5rem; }
+#sticky-prompt .term-content.expanded { max-height: none !important; overflow-y: auto !important; }
+#sticky-prompt .term-nav { display: flex; justify-content: flex-end; gap: 12px; padding: 2px 0.5rem; font-size: 11px; }
+#sticky-prompt .term-nav span { color: #555; cursor: pointer; user-select: none; }
+#sticky-prompt .term-nav span:hover { color: #999; }
+#sticky-prompt .term-nav span.hidden { display: none; }
+#sticky-prompt .term-meta-line { text-align: right; padding: 0 0.5rem; font-size: 11px; }
+#sticky-prompt .term-meta { display: inline-flex; gap: 8px; white-space: nowrap; }
+#sticky-prompt .meta-model { color: #888; }
+#sticky-prompt .meta-tokens { color: #777; }
+#sticky-prompt .meta-time { color: #555; }
 
 .term-block.type-user .term-prefix {
     color: #f88;
     font-weight: bold;
+}
+
+.user-icon {
+    height: 1.4em;
+    width: 1.4em;
+    object-fit: cover;
+    vertical-align: middle;
+    border: 1px solid #000;
+    border-radius: 100%;
 }
 
 .term-block.type-user .term-content {
@@ -282,6 +330,7 @@ tbody td {
 
 .term-block.type-assistant {
     background: #112218;
+    padding-bottom: 0;
 }
 
 .term-block.type-assistant .term-content {
@@ -360,6 +409,24 @@ tbody td {
 .term-content {
     padding: 0 0.5rem;
 }
+
+/* Navigation footer */
+.term-nav {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 2px 0.5rem;
+    font-size: 11px;
+}
+
+.term-nav span {
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+}
+
+.term-nav span:hover { color: #999; }
+.term-nav span.hidden { display: none; }
 
 /* Token/meta info — right-aligned line above content */
 .term-meta-line {
@@ -475,18 +542,22 @@ tbody td {
             <div class="transcript-meta" id="transcript-meta"></div>
         </div>
         <div class="filters-bar" id="filters-bar">
-            <label><input type="checkbox" id="filter-all"> All</label>
-            <label><input type="checkbox" id="filter-user" checked> User</label>
-            <label><input type="checkbox" id="filter-assistant" checked> Assistant</label>
-            <label><input type="checkbox" id="filter-thinking" checked> Thinking</label>
-            <label><input type="checkbox" id="filter-tools" checked> Tool calls</label>
-            <label><input type="checkbox" id="filter-results" checked> Tool results</label>
-            <label><input type="checkbox" id="filter-agent"> Agent notifications</label>
-            <label><input type="checkbox" id="filter-skill"> Skills</label>
-            <label><input type="checkbox" id="filter-plan" checked> Plans</label>
-            <label><input type="checkbox" id="filter-interrupt" checked> Interruptions</label>
-            <label><input type="checkbox" id="filter-continuation"> Continuations</label>
+            <div class="filters-toggles">
+                <label><input type="checkbox" id="filter-all"> All</label>
+                <label><input type="checkbox" id="filter-user" checked> User</label>
+                <label><input type="checkbox" id="filter-assistant" checked> Assistant</label>
+                <label><input type="checkbox" id="filter-thinking" checked> Thinking</label>
+                <label><input type="checkbox" id="filter-tools" checked> Tool calls</label>
+                <label><input type="checkbox" id="filter-results" checked> Tool results</label>
+                <label><input type="checkbox" id="filter-agent"> Agent notifications</label>
+                <label><input type="checkbox" id="filter-skill"> Skills</label>
+                <label><input type="checkbox" id="filter-plan" checked> Plans</label>
+                <label><input type="checkbox" id="filter-interrupt" checked> Interruptions</label>
+                <label><input type="checkbox" id="filter-continuation"> Continuations</label>
+            </div>
+            <div id="scroll-metrics"></div>
         </div>
+        <div id="sticky-prompt"></div>
         <div class="messages" id="messages-container"></div>
         <div id="transcript-loading" class="hidden" style="text-align:center;padding:40px;color:#555">Loading transcript...</div>
         <div id="transcript-error" class="hidden" style="color:#dc3545;padding:12px 16px"></div>
@@ -1018,8 +1089,10 @@ function renderTranscriptMeta(sessionId) {
         <span><span class="label">Project: </span><span class="val">${escapeHtml(session.project)}</span></span>
         <span><span class="label">Started: </span><span class="val">${formatTime(session.started)}</span></span>
         <span><span class="label">Duration: </span><span class="val">${formatDuration(session.total_duration_sec)}</span></span>
+        <span><span class="label">API time: </span><span class="val">${formatMs(session.api_duration_ms)}</span></span>
         <span><span class="label">Model: </span><span class="val">${escapeHtml(shortModel(session.model))}</span></span>
         <span><span class="label">Cost: </span><span class="val">${formatCost(session.cost)}</span></span>
+        <span title="Input / Output / Cache read / Cache create tokens"><span class="val">\u2193${formatNumber(session.input_tokens)} \u2191${formatNumber(session.output_tokens)} \u21CA${formatNumber(session.cache_read_tokens)} \u21C8${formatNumber(session.cache_creation_tokens)}</span></span>
         ${session.git_branch ? `<span><span class="label">Branch: </span><span class="val">${escapeHtml(session.git_branch)}</span></span>` : ''}
     `;
 }
@@ -1141,6 +1214,7 @@ function updateFilterLabels(counts) {
         const el = document.getElementById(id);
         if (el && el.parentElement) {
             el.parentElement.childNodes[1].textContent = ` ${name} (${count})`;
+            el.disabled = count === 0;
         }
     }
 }
@@ -1154,6 +1228,8 @@ function renderTranscript() {
 
     const counts = countMessages(transcriptData);
     updateFilterLabels(counts);
+    buildCumulativeMetrics();
+    lastScrollMetricsIdx = -1;
 
     const filters = getFilters();
     const html = [];
@@ -1185,11 +1261,14 @@ function renderTranscript() {
         return tag + body;
     }
 
+    let currentMsgIdx = -1;
     function emit(type, prefix, body, msg, isSidechain, extraClass) {
         const cls = `term-block type-${type}${isSidechain ? ' sidechain' : ''}${extraClass ? ' ' + extraClass : ''}`;
         const meta = metaHtml(msg, isSidechain);
         const metaLine = meta ? `<div class="term-meta-line">${meta}</div>` : '';
-        html.push(`<div class="${cls}">${metaLine}<div class="term-content">${prependPrefix(prefix, body)}</div></div>`);
+        const navAttr = (type === 'user' || type === 'assistant') ? ` data-nav="${type}"` : '';
+        const navFooter = navAttr ? `<div class="term-nav"><span class="nav-prev" data-dir="prev">\u25B2 prev</span><span class="nav-next" data-dir="next">\u25BC next</span></div>` : '';
+        html.push(`<div class="${cls}"${navAttr} data-msg-idx="${currentMsgIdx}">${metaLine}<div class="term-content">${prependPrefix(prefix, body)}</div>${navFooter}</div>`);
     }
 
     function renderMd(text) {
@@ -1204,7 +1283,9 @@ function renderTranscript() {
         return `<div style="white-space:pre-wrap">${renderAnsi(text)}</div>`;
     }
 
-    for (const msg of transcriptData) {
+    for (let mi = 0; mi < transcriptData.length; mi++) {
+        const msg = transcriptData[mi];
+        currentMsgIdx = mi;
         const cl = classifyMessage(msg);
         const isSidechain = cl.isSidechain;
 
@@ -1233,36 +1314,35 @@ function renderTranscript() {
         // Assistant: emit each sub-block separately
         if (msg.type === 'assistant') {
             let textParts = [];
+            function flushText() {
+                if (!textParts.length || !filters.assistant) return;
+                const joined = textParts.join('');
+                textParts = [];
+                if (!joined.replace(/<[^>]*>/g, '').trim()) return;
+                emit('assistant', '\u25CF', joined, msg, isSidechain);
+            }
             for (const block of blocks) {
                 if (block.type === 'thinking' && block.thinking) {
-                    if (textParts.length && filters.assistant) {
-                        emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
-                        textParts = [];
-                    }
+                    flushText();
                     if (!filters.thinking) continue;
                     emit('thinking', '\u{1F4AD}', `<div style="white-space:pre-wrap">${escapeHtml(block.thinking)}</div>`, msg, isSidechain);
-                } else if (block.type === 'text' && block.text) {
+                } else if (block.type === 'text' && block.text && block.text.trim()) {
                     textParts.push(renderMd(block.text));
                 } else if (block.type === 'tool_use') {
-                    if (textParts.length && filters.assistant) {
-                        emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
-                        textParts = [];
-                    }
+                    flushText();
                     if (!filters.tools) continue;
                     const toolName = block.name || 'tool';
                     const toolBody = `<div style="white-space:pre-wrap">${renderToolInput(block.input)}</div>`;
                     emit('tool_use', `\u25CF ${escapeHtml(toolName)}`, toolBody, msg, isSidechain);
                 }
             }
-            if (textParts.length && filters.assistant) {
-                emit('assistant', '\u25CF', textParts.join(''), msg, isSidechain);
-            }
+            flushText();
             continue;
         }
 
         // User messages and subtypes
         const prefixMap = {
-            user:               '\u276F',
+            user:               '<img src="user.jpg" class="user-icon">',
             tool_result:        '',
             agent_notification: '\u25CB agent',
             skill:              '\u25CB skill',
@@ -1298,11 +1378,27 @@ function renderTranscript() {
 
     container.innerHTML = html.join('') || '<div style="color:#555;text-align:center;padding:60px 20px">No visible messages (adjust filters)</div>';
     updateStickyOffset();
+    updateScrollMetrics();
+
+    // Hide prev on first and next on last for each nav group
+    for (const group of ['user', 'assistant']) {
+        const blocks = container.querySelectorAll(`[data-nav="${group}"]`);
+        if (blocks.length > 0) {
+            const firstNav = blocks[0].querySelector('.nav-prev');
+            const lastNav = blocks[blocks.length - 1].querySelector('.nav-next');
+            if (firstNav) firstNav.classList.add('hidden');
+            if (lastNav) lastNav.classList.add('hidden');
+        }
+    }
 }
 
 function updateStickyOffset() {
     const bar = document.getElementById('filters-bar');
-    if (bar) document.getElementById('messages-container').style.setProperty('--filters-height', bar.offsetHeight + 'px');
+    if (bar) {
+        const h = bar.offsetHeight + 'px';
+        document.getElementById('messages-container').style.setProperty('--filters-height', h);
+        document.getElementById('sticky-prompt').style.setProperty('--filters-height', h);
+    }
 }
 
 // Filter toggles
@@ -1315,11 +1411,193 @@ document.getElementById('filters-bar').addEventListener('change', e => {
     if (e.target.id !== 'filter-all') renderTranscript();
 });
 
-// Click to expand/collapse scrollable blocks
+// Click to expand/collapse scrollable blocks, and prev/next navigation
 document.getElementById('messages-container').addEventListener('click', e => {
+    // Nav buttons
+    const navBtn = e.target.closest('.nav-prev, .nav-next');
+    if (navBtn) {
+        const block = navBtn.closest('[data-nav]');
+        if (!block) return;
+        const group = block.dataset.nav;
+        const all = [...document.querySelectorAll(`[data-nav="${group}"]`)];
+        const idx = all.indexOf(block);
+        const target = navBtn.classList.contains('nav-prev') ? all[idx - 1] : all[idx + 1];
+        if (target) {
+            const offset = parseInt(getComputedStyle(document.getElementById('messages-container')).getPropertyValue('--filters-height')) || 36;
+            const top = target.offsetTop - offset;
+            window.scrollTo({ top, behavior: 'smooth' });
+        }
+        return;
+    }
+    // Expand/collapse
     const block = e.target.closest('.type-user, .type-thinking, .type-tool_use, .type-tool_result');
     if (!block) return;
     const content = block.querySelector('.term-content');
+    if (content) content.classList.toggle('expanded');
+});
+
+// Sticky user prompt
+let stickyCurrentIdx = -1;
+let stickyHeight = 60; // cached height estimate
+function updateStickyPrompt() {
+    const container = document.getElementById('messages-container');
+    const sticky = document.getElementById('sticky-prompt');
+    const blocks = container.querySelectorAll('[data-nav="user"]');
+    if (!blocks.length) { sticky.style.display = 'none'; return; }
+
+    const filtersBar = document.getElementById('filters-bar');
+    const filtersH = filtersBar ? filtersBar.offsetHeight : 36;
+    // All comparisons use offsetTop (document-relative, unaffected by fixed positioning)
+    const scrollTop = window.scrollY + filtersH;
+
+    // Find the last user block whose top has scrolled past
+    let currentIdx = -1;
+    for (let i = 0; i < blocks.length; i++) {
+        if (blocks[i].offsetTop < scrollTop) currentIdx = i;
+        else break;
+    }
+
+    // Don't show if no block has scrolled past, or current block bottom is still visible
+    if (currentIdx < 0 || (blocks[currentIdx].offsetTop + blocks[currentIdx].offsetHeight) > scrollTop) {
+        sticky.style.display = 'none';
+        stickyCurrentIdx = -1;
+        return;
+    }
+
+    // Hide sticky if the next user prompt would overlap with it
+    const nextBlock = blocks[currentIdx + 1];
+    if (nextBlock) {
+        const stickyBottomY = scrollTop + stickyHeight;
+        if (nextBlock.offsetTop <= stickyBottomY + 2) {
+            sticky.style.display = 'none';
+            stickyCurrentIdx = -1;
+            return;
+        }
+    }
+
+    if (currentIdx !== stickyCurrentIdx) {
+        stickyCurrentIdx = currentIdx;
+        sticky.innerHTML = blocks[currentIdx].innerHTML;
+        // Update prev/next visibility
+        const prev = sticky.querySelector('.nav-prev');
+        const next = sticky.querySelector('.nav-next');
+        if (prev) prev.classList.toggle('hidden', currentIdx === 0);
+        if (next) next.classList.toggle('hidden', currentIdx === blocks.length - 1);
+    }
+    sticky.style.top = filtersH + 'px';
+    sticky.style.display = 'block';
+    // Cache actual height for next frame's overlap check
+    stickyHeight = sticky.offsetHeight;
+}
+
+// Scroll metrics — cumulative stats line in the filters bar
+let cumulativeMetrics = null; // Array indexed by transcriptData index
+
+function buildCumulativeMetrics() {
+    if (!transcriptData || !transcriptData.length) { cumulativeMetrics = null; return; }
+    cumulativeMetrics = new Array(transcriptData.length);
+    let time0 = null;
+    let apiMs = 0, inTok = 0, outTok = 0, cacheRead = 0, cacheCreate = 0;
+    let userPrompts = 0, assistantMsgs = 0, compactions = 0, plans = 0;
+    for (let i = 0; i < transcriptData.length; i++) {
+        const msg = transcriptData[i];
+        const ts = msg.ts ? new Date(msg.ts.replace(' ', 'T')) : null;
+        if (ts && !isNaN(ts) && !time0) time0 = ts;
+
+        // API duration from turn_duration system messages
+        if (msg.type === 'system' && msg.subtype === 'turn_duration') {
+            apiMs += Number(msg.duration_ms) || 0;
+        }
+        // Compactions
+        if (msg.type === 'system' && (msg.subtype === 'compact_boundary' || msg.subtype === 'microcompact_boundary')) {
+            compactions++;
+        }
+        // Tokens (assistant messages)
+        if (msg.type === 'assistant') {
+            inTok += Number(msg.input_tokens) || 0;
+            outTok += Number(msg.output_tokens) || 0;
+            cacheRead += Number(msg.cache_read_tokens) || 0;
+            cacheCreate += Number(msg.cache_creation_tokens) || 0;
+            const cl = classifyMessage(msg);
+            if (cl.hasText) assistantMsgs++;
+        }
+        // User prompts (real user messages)
+        if (msg.type === 'user') {
+            const cl = classifyMessage(msg);
+            if (cl.category === 'user') userPrompts++;
+            if (cl.category === 'plan') plans++;
+        }
+
+        const elapsed = (ts && time0) ? Math.round((ts - time0) / 1000) : 0;
+        cumulativeMetrics[i] = { elapsed, apiMs, inTok, outTok, cacheRead, cacheCreate, userPrompts, assistantMsgs, compactions, plans };
+    }
+}
+
+function computeCumulativeCost(m, sessionId) {
+    const session = sessions.find(s => s.session_id === sessionId);
+    const model = session ? session.model : '';
+    const tier = detectPricingTier(model);
+    const p = PRICING[tier];
+    return (m.inTok * p.input + m.outTok * p.output + m.cacheRead * p.cache_read + m.cacheCreate * p.cache_creation) / 1_000_000;
+}
+
+let lastScrollMetricsIdx = -1;
+function updateScrollMetrics() {
+    const metricsEl = document.getElementById('scroll-metrics');
+    if (!cumulativeMetrics || !transcriptData || window.scrollY < 10) { metricsEl.style.display = 'none'; return; }
+
+    const container = document.getElementById('messages-container');
+    const blocks = container.querySelectorAll('.term-block[data-msg-idx]');
+    if (!blocks.length) { metricsEl.style.display = 'none'; return; }
+
+    // Find the last block whose top is above the viewport bottom
+    const viewBottom = window.scrollY + window.innerHeight;
+    let lastIdx = -1;
+    for (const block of blocks) {
+        if (block.offsetTop <= viewBottom) {
+            const mi = parseInt(block.dataset.msgIdx);
+            if (mi > lastIdx) lastIdx = mi;
+        }
+    }
+
+    if (lastIdx < 0 || lastIdx >= cumulativeMetrics.length) { metricsEl.style.display = 'none'; return; }
+    if (lastIdx === lastScrollMetricsIdx) return;
+    lastScrollMetricsIdx = lastIdx;
+
+    const wasHidden = metricsEl.style.display === 'none';
+    const m = cumulativeMetrics[lastIdx];
+    const sessionId = window.location.hash.slice('#session/'.length);
+    const cost = computeCumulativeCost(m, sessionId);
+
+    metricsEl.style.display = 'flex';
+    metricsEl.innerHTML =
+        `<span>\u23F1 <span class="val">${formatDuration(m.elapsed)}</span></span>` +
+        `<span>$ <span class="val">${formatCost(cost)}</span></span>` +
+        `<span>\u2193<span class="val">${formatNumber(m.inTok)}</span> \u2191<span class="val">${formatNumber(m.outTok)}</span> \u21CA<span class="val">${formatNumber(m.cacheRead)}</span> \u21C8<span class="val">${formatNumber(m.cacheCreate)}</span></span>` +
+        `<span>User <span class="val">${m.userPrompts}</span></span>` +
+        `<span>Agent <span class="val">${m.assistantMsgs}</span></span>` +
+        (m.compactions ? `<span>Compactions <span class="val">${m.compactions}</span></span>` : '') +
+        (m.plans ? `<span>Plans <span class="val">${m.plans}</span></span>` : '');
+
+    if (wasHidden) updateStickyOffset();
+}
+
+window.addEventListener('scroll', () => { updateStickyPrompt(); updateScrollMetrics(); }, { passive: true });
+
+// Click handler for sticky prompt
+document.getElementById('sticky-prompt').addEventListener('click', e => {
+    const navBtn = e.target.closest('.nav-prev, .nav-next');
+    if (navBtn) {
+        const blocks = [...document.querySelectorAll('[data-nav="user"]')];
+        const target = navBtn.classList.contains('nav-prev') ? blocks[stickyCurrentIdx - 1] : blocks[stickyCurrentIdx + 1];
+        if (target) {
+            const offset = parseInt(getComputedStyle(document.getElementById('messages-container')).getPropertyValue('--filters-height')) || 36;
+            const top = target.offsetTop - offset;
+            window.scrollTo({ top, behavior: 'smooth' });
+        }
+        return;
+    }
+    const content = document.getElementById('sticky-prompt').querySelector('.term-content');
     if (content) content.classList.toggle('expanded');
 });
 
