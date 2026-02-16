@@ -165,6 +165,7 @@ tbody td {
     line-height: 1.4;
 }
 
+.col-tags { white-space: nowrap; font-size: 14px; padding: 0 2px; }
 .col-time { white-space: nowrap; color: var(--text-dim); font-size: 12px; }
 .col-duration { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .col-number { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
@@ -552,6 +553,7 @@ mark.search-hit.current { background: #f88; color: #000; }
                 <thead>
                     <tr>
                         <th data-col="summary">Summary</th>
+                        <th data-col="tags"></th>
                         <th data-col="started">Started</th>
                         <th data-col="total_duration_sec" class="align-right">Duration</th>
                         <th data-col="api_duration_ms" class="align-right">API Time</th>
@@ -844,6 +846,11 @@ GROUP BY session_id`;
     return await queryClickHouse(sql);
 }
 
+async function loadClassifications() {
+    const sql = `SELECT data.session_id::String AS session_id, data.remarkable::Bool AS remarkable, data.remarkable_reason::String AS remarkable_reason, data.user_corrected_agent::Bool AS user_corrected_agent, data.correction_detail::String AS correction_detail, data.agent_was_right::Bool AS agent_was_right, data.agent_right_detail::String AS agent_right_detail, data.sensitive_info::Bool AS sensitive_info, data.sensitive_detail::String AS sensitive_detail FROM claude_code.classification`;
+    return await queryClickHouse(sql);
+}
+
 // --- Session List ---
 async function loadSessions() {
     const loading = document.getElementById('list-loading');
@@ -893,15 +900,26 @@ WHERE path NOT LIKE '%history.jsonl'
 GROUP BY session_id, project
 HAVING user_msgs > 0
 ORDER BY started DESC`;
-        const [sessionRows, lineRows] = await Promise.all([queryClickHouse(sql), loadLineStats()]);
+        const [sessionRows, lineRows, classRows] = await Promise.all([queryClickHouse(sql), loadLineStats(), loadClassifications()]);
         sessions = sessionRows;
         const lineMap = new Map(lineRows.map(r => [r.session_id, r]));
+        const classMap = new Map(classRows.map(r => [r.session_id, r]));
         sessions.forEach(s => {
             s.cost = computeCost(s);
             s.total_tokens = (Number(s.input_tokens) || 0) + (Number(s.output_tokens) || 0) + (Number(s.cache_read_tokens) || 0) + (Number(s.cache_creation_tokens) || 0);
             const ls = lineMap.get(s.session_id);
             s.lines_added = ls ? Number(ls.lines_added) || 0 : 0;
             s.lines_removed = ls ? Number(ls.lines_removed) || 0 : 0;
+            const cl = classMap.get(s.session_id);
+            const toBool = v => v === true || v === 1 || v === '1' || v === 'true';
+            s.remarkable = cl && toBool(cl.remarkable);
+            s.remarkable_reason = cl ? cl.remarkable_reason || '' : '';
+            s.user_corrected = cl && toBool(cl.user_corrected_agent);
+            s.correction_detail = cl ? cl.correction_detail || '' : '';
+            s.agent_right = cl && toBool(cl.agent_was_right);
+            s.agent_right_detail = cl ? cl.agent_right_detail || '' : '';
+            s.sensitive = cl && toBool(cl.sensitive_info);
+            s.sensitive_detail = cl ? cl.sensitive_detail || '' : '';
         });
         mergePlanSessions();
         loading.classList.add('hidden');
@@ -978,7 +996,7 @@ function renderSessionList() {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="empty-state">No sessions found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="empty-state">No sessions found</td></tr>`;
         return;
     }
 
@@ -1023,6 +1041,7 @@ function renderSessionList() {
         return `
         <tr data-session="${escapeHtml(s.session_id)}">
             <td><div class="col-summary-inner" title="${escapeHtml(getSummaryText(s))}">${escapeHtml(getSummaryText(s))}</div></td>
+            <td class="col-tags">${(s.remarkable ? `<span title="${escapeHtml(s.remarkable_reason)}">\u2B50</span>` : '') + (s.sensitive ? `<span title="${escapeHtml(s.sensitive_detail)}">\u26A0\uFE0F</span>` : '') + (s.user_corrected ? `<span title="${escapeHtml(s.correction_detail)}">\u270A</span>` : '') + (s.agent_right ? `<span title="${escapeHtml(s.agent_right_detail)}">\uD83D\uDD25</span>` : '')}</td>
             <td class="col-time">${formatTime(s.started)}</td>
             <td class="col-duration align-right" style="${bar('total_duration_sec', Number(s.total_duration_sec) || 0)}">${formatDuration(s.total_duration_sec)}</td>
             <td class="col-duration align-right" style="${bar('api_duration_ms', Number(s.api_duration_ms) || 0)}">${formatMs(s.api_duration_ms)}</td>
