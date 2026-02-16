@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alexey Prompts</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ansi_up@5.2.1/ansi_up.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: #ffffff;
+    --bg-surface: #f8f9fa;
+    --bg-hover: #e9ecef;
+    --border: #dee2e6;
+    --text: #212529;
+    --text-dim: #6c757d;
+    --text-bright: #000000;
+    --accent: #0d6efd;
+    --accent-dim: #6ea8fe;
+    --green: #198754;
+    --red: #dc3545;
+    --yellow: #b45309;
+    --orange: #e67700;
+    --cyan: #0891b2;
+    --purple: #7c3aed;
+    --user-border: #0d6efd;
+    --assistant-border: #198754;
+    --system-border: #adb5bd;
+    --tool-border: #e67700;
+    --agent-border: #6c757d;
+    --skill-border: #6f42c1;
+    --plan-border: #0d9488;
+    --interrupt-border: #dc3545;
+    --continuation-border: #adb5bd;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1600px; margin: 0 auto; padding: 16px; }
+
+header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    white-space: nowrap;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 500px;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 6px 12px 6px 32px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+}
+
+.search-box input:focus { border-color: var(--accent); }
+
+.search-box::before {
+    content: '\1F50D';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.5;
+}
+
+.stats-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-left: auto;
+}
+
+.stats-bar span { white-space: nowrap; }
+.stats-bar .value { color: var(--text-bright); font-weight: 600; }
+
+/* Session List */
+#session-list-view { display: block; }
+#transcript-view { display: none; }
+
+.table-wrap { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-surface);
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-dim);
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+thead th:hover { color: var(--text-bright); }
+thead th.sorted-asc::after { content: ' \25B2'; color: var(--accent); }
+thead th.sorted-desc::after { content: ' \25BC'; color: var(--accent); }
+
+thead th.align-right, tbody td.align-right { text-align: right; }
+
+tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+tbody tr:hover { background: var(--bg-hover); }
+
+tbody td {
+    padding: 7px 10px;
+    vertical-align: top;
+    max-width: 450px;
+}
+
+
+.col-summary-inner {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+}
+
+.col-time { white-space: nowrap; color: var(--text-dim); font-size: 12px; }
+.col-duration { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.col-number { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+.col-cost { white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; color: var(--yellow); }
+.col-model { white-space: nowrap; font-size: 11px; color: var(--text-dim); }
+
+/* Transcript View */
+.transcript-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.transcript-header .back-btn {
+    padding: 4px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.transcript-header .back-btn:hover { background: var(--bg-hover); }
+
+.transcript-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.transcript-meta .label { color: var(--text-dim); }
+.transcript-meta .val { color: var(--text-bright); }
+
+.filters-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+
+    border: 1px solid var(--border);
+}
+
+.filters-bar label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    user-select: none;
+}
+
+.filters-bar input[type="checkbox"] { accent-color: var(--accent); }
+
+.messages { display: flex; flex-direction: column; gap: 8px; }
+
+.message-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+
+    border-left: 3px solid var(--system-border);
+    overflow: hidden;
+}
+
+.message-card.type-user { border-left-color: var(--user-border); }
+.message-card.type-assistant { border-left-color: var(--assistant-border); }
+.message-card.type-system { border-left-color: var(--system-border); }
+.message-card.type-tool_result { border-left-color: var(--tool-border); }
+.message-card.type-thinking { border-left-color: var(--purple); }
+.message-card.type-tool_use { border-left-color: var(--orange); }
+.message-card.type-agent_notification { border-left-color: var(--agent-border); }
+.message-card.type-skill { border-left-color: var(--skill-border); }
+.message-card.type-plan { border-left-color: var(--plan-border); }
+.message-card.type-interrupt { border-left-color: var(--interrupt-border); }
+.message-card.type-continuation { border-left-color: var(--continuation-border); }
+.message-card.sidechain { opacity: 0.6; }
+
+.msg-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.04);
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+}
+
+.msg-role {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.msg-role.user { color: var(--user-border); }
+.msg-role.assistant { color: var(--assistant-border); }
+.msg-role.thinking { color: var(--purple); }
+.msg-role.tool_use { color: var(--orange); }
+.msg-role.tool_result { color: var(--tool-border); }
+.msg-role.agent_notification { color: var(--agent-border); }
+.msg-role.skill { color: var(--skill-border); }
+.msg-role.plan { color: var(--plan-border); }
+.msg-role.interrupt { color: var(--interrupt-border); }
+.msg-role.continuation { color: var(--continuation-border); }
+.msg-role.system { color: var(--text-dim); }
+
+.msg-model { color: var(--text-dim); font-size: 11px; }
+.msg-tokens { font-size: 11px; color: var(--text-dim); margin-left: auto; }
+
+.msg-body { padding: 10px 12px; }
+
+.type-thinking .msg-body {
+    font-size: 13px;
+    color: var(--purple);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.type-tool_use .msg-body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.type-tool_result .msg-body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    color: var(--text-dim);
+}
+
+.content-block { margin-bottom: 8px; }
+.content-block:last-child { margin-bottom: 0; }
+
+.block-text {
+    word-break: break-word;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.block-text p { margin: 0.4em 0; }
+.block-text p:first-child { margin-top: 0; }
+.block-text p:last-child { margin-bottom: 0; }
+.block-text pre { background: rgba(0,0,0,0.05); padding: 8px 10px; overflow-x: auto; margin: 0.5em 0; }
+.block-text code { background: rgba(0,0,0,0.05); padding: 1px 4px; font-size: 12px; }
+.block-text pre code { background: none; padding: 0; }
+.block-text ul, .block-text ol { margin: 0.4em 0; padding-left: 1.5em; }
+.block-text h1, .block-text h2, .block-text h3, .block-text h4 { margin: 0.6em 0 0.3em; }
+.block-text h1 { font-size: 1.3em; }
+.block-text h2 { font-size: 1.15em; }
+.block-text h3 { font-size: 1.05em; }
+.block-text blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--text-dim); margin: 0.4em 0; }
+.block-text table { border-collapse: collapse; margin: 0.4em 0; }
+.block-text th, .block-text td { border: 1px solid var(--border); padding: 4px 8px; }
+.block-text img { max-width: 100%; }
+
+
+.block-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.block-label.thinking-label { color: var(--purple); }
+.block-label.tool-label { color: var(--orange); }
+.block-label.result-label { color: var(--cyan); }
+
+.summary-card {
+    background: rgba(25, 135, 84, 0.06);
+    border: 1px solid rgba(25, 135, 84, 0.2);
+
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--green);
+}
+
+.summary-card .block-label { color: var(--green); }
+.summary-card .block-text { color: var(--green); }
+
+.hidden { display: none !important; }
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+}
+
+.error-msg {
+    background: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    color: var(--red);
+    padding: 12px;
+
+    margin: 16px 0;
+}
+
+.search-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Alexey Prompts</h1>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search all message content...">
+        </div>
+        <div class="stats-bar" id="stats-bar"></div>
+    </header>
+
+    <div id="session-list-view">
+        <div class="table-wrap">
+            <table id="session-table">
+                <thead>
+                    <tr>
+                        <th data-col="summary">Summary</th>
+                        <th data-col="started">Started</th>
+                        <th data-col="total_duration_sec" class="align-right">Duration</th>
+                        <th data-col="api_duration_ms" class="align-right">API Time</th>
+                        <th data-col="user_msgs" class="align-right">Prompts</th>
+                        <th data-col="all_msgs" class="align-right">Msgs</th>
+                        <th data-col="total_tokens" class="align-right">Tokens</th>
+                        <th data-col="cost" class="align-right">Cost</th>
+                        <th data-col="approved_count" class="align-right">Approved</th>
+                        <th data-col="rejected_count" class="align-right">Rejected</th>
+                        <th data-col="plan_count" class="align-right">Plans</th>
+                        <th data-col="compaction_count" class="align-right">Compactions</th>
+                        <th data-col="lines_added" class="align-right">Lines</th>
+                        <th data-col="model">Model</th>
+                    </tr>
+                </thead>
+                <tbody id="session-tbody"></tbody>
+            </table>
+        </div>
+        <div id="list-loading" class="loading">Loading sessions...</div>
+        <div id="list-error" class="error-msg hidden"></div>
+    </div>
+
+    <div id="transcript-view">
+        <div class="transcript-header">
+            <button class="back-btn" id="back-btn">&larr; Back</button>
+            <div class="transcript-meta" id="transcript-meta"></div>
+        </div>
+        <div class="filters-bar" id="filters-bar">
+            <label><input type="checkbox" id="filter-user" checked> User</label>
+            <label><input type="checkbox" id="filter-assistant" checked> Assistant</label>
+            <label><input type="checkbox" id="filter-thinking" checked> Thinking</label>
+            <label><input type="checkbox" id="filter-tools" checked> Tool calls</label>
+            <label><input type="checkbox" id="filter-results" checked> Tool results</label>
+            <label><input type="checkbox" id="filter-agent" checked> Agent notifications</label>
+            <label><input type="checkbox" id="filter-skill" checked> Skills</label>
+            <label><input type="checkbox" id="filter-plan" checked> Plans</label>
+            <label><input type="checkbox" id="filter-interrupt" checked> Interruptions</label>
+            <label><input type="checkbox" id="filter-continuation" checked> Continuations</label>
+            <label><input type="checkbox" id="filter-progress"> Progress</label>
+            <label><input type="checkbox" id="filter-system"> System</label>
+            <label><input type="checkbox" id="filter-sidechain"> Sidechain</label>
+        </div>
+        <div class="messages" id="messages-container"></div>
+        <div id="transcript-loading" class="loading hidden">Loading transcript...</div>
+        <div id="transcript-error" class="error-msg hidden"></div>
+    </div>
+</div>
+
+<script>
+const ansiUp = new AnsiUp();
+
+const CH_URL = 'http://localhost:8123/';
+
+// Model pricing per million tokens
+const PRICING = {
+    'opus-4.5+': { input: 5, output: 25, cache_read: 0.50, cache_creation: 6.25 },
+    'opus-4.0':  { input: 15, output: 75, cache_read: 1.50, cache_creation: 18.75 },
+    sonnet:      { input: 3, output: 15, cache_read: 0.30, cache_creation: 3.75 },
+    haiku:       { input: 1, output: 5, cache_read: 0.10, cache_creation: 1.25 },
+};
+
+function detectPricingTier(model) {
+    if (!model) return 'sonnet';
+    const m = model.toLowerCase();
+    if (m.includes('opus')) {
+        // opus-4-5, opus-4-6 etc. are $5/$25; opus-4-0, opus-4-1, opus-4 (no minor) are $15/$75
+        const ver = m.match(/opus-(\d+)-(\d+)/);
+        if (ver && Number(ver[1]) >= 4 && Number(ver[2]) >= 5) return 'opus-4.5+';
+        if (ver) return 'opus-4.0';
+        return 'opus-4.5+'; // default for unversioned opus
+    }
+    if (m.includes('haiku')) return 'haiku';
+    return 'sonnet';
+}
+
+function computeCost(row) {
+    const tier = detectPricingTier(row.model);
+    const p = PRICING[tier];
+    return (
+        (Number(row.input_tokens) || 0) * p.input +
+        (Number(row.output_tokens) || 0) * p.output +
+        (Number(row.cache_read_tokens) || 0) * p.cache_read +
+        (Number(row.cache_creation_tokens) || 0) * p.cache_creation
+    ) / 1_000_000;
+}
+
+async function queryClickHouse(sql) {
+    const resp = await fetch(CH_URL, {
+        method: 'POST',
+        body: sql + '\nFORMAT JSON',
+    });
+    if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`ClickHouse error ${resp.status}: ${text.slice(0, 500)}`);
+    }
+    const json = await resp.json();
+    return json.data || [];
+}
+
+// --- State ---
+let sessions = [];
+let sortCol = 'started';
+let sortDir = 'desc';
+let searchText = '';
+let fullTextSessionIds = null; // null = no full-text filter; Set = restrict to these
+let transcriptData = null;
+
+// --- Formatting helpers ---
+function formatDuration(sec) {
+    sec = Number(sec) || 0;
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${h}h ${m}m`;
+}
+
+function formatMs(ms) {
+    ms = Number(ms) || 0;
+    const sec = Math.round(ms / 1000);
+    return formatDuration(sec);
+}
+
+function formatNumber(n) {
+    n = Number(n) || 0;
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return String(n);
+}
+
+function formatCost(c) {
+    if (c < 0.01) return '$' + c.toFixed(4);
+    if (c < 1) return '$' + c.toFixed(3);
+    return '$' + c.toFixed(2);
+}
+
+function formatTime(ts) {
+    if (!ts) return '';
+    // ClickHouse returns "2026-02-13 22:56:12.795" (no timezone, local time)
+    // Try parsing as-is first, then with T separator
+    let d = new Date(ts);
+    if (isNaN(d)) d = new Date(ts.replace(' ', 'T'));
+    if (isNaN(d)) return ts;
+    const now = new Date();
+    const diff = now - d;
+    const pad = n => String(n).padStart(2, '0');
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    if (diff < 86400000 && d.getDate() === now.getDate()) return `Today ${time}`;
+    if (diff < 172800000) return `Yesterday ${time}`;
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${time}`;
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[/;
+function renderAnsi(s) {
+    if (!s) return '';
+    if (ANSI_RE.test(s)) return ansiUp.ansi_to_html(s);
+    return escapeHtml(s);
+}
+
+function shortModel(m) {
+    if (!m) return '';
+    // e.g. "claude-sonnet-4-5-20250514" -> "sonnet-4.5"
+    const match = m.match(/claude-(\w+)-(\d+)-(\d+)/);
+    if (match) return `${match[1]}-${match[2]}.${match[3]}`;
+    return m.replace('claude-', '');
+}
+
+function getSummaryText(row) {
+    if (row.summary) return row.summary;
+    if (row.first_question) {
+        const t = row.first_question;
+        // Try to parse if it's JSON array (content blocks)
+        if (t.startsWith('[')) {
+            try {
+                const blocks = JSON.parse(t);
+                if (Array.isArray(blocks)) {
+                    const texts = blocks.filter(b => b.type === 'text').map(b => b.text);
+                    if (texts.length) return texts.join(' ').slice(0, 300);
+                }
+            } catch(e) {}
+        }
+        return t.slice(0, 300);
+    }
+    return '(no summary)';
+}
+
+// --- Plan+Implementation merging ---
+const UUID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl/;
+const PLAN_PREFIX = 'Implement the following plan:';
+
+function mergePlanSessions() {
+    const byId = new Map(sessions.map(s => [s.session_id, s]));
+    const planIds = new Set(); // plan sessions to hide
+
+    for (const s of sessions) {
+        const raw = s.first_question || '';
+        if (!raw.startsWith(PLAN_PREFIX)) continue;
+        const match = raw.match(UUID_RE);
+        if (!match) continue;
+        const planId = match[1];
+        const plan = byId.get(planId);
+        if (!plan) continue;
+
+        // Merge plan session into implementation session
+        const numFields = ['user_msgs', 'assistant_msgs', 'all_msgs',
+            'input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_creation_tokens',
+            'api_duration_ms', 'plan_count', 'compaction_count', 'approved_count', 'rejected_count',
+            'lines_added', 'lines_removed'];
+        for (const f of numFields) {
+            s[f] = (Number(s[f]) || 0) + (Number(plan[f]) || 0);
+        }
+
+        // Use earlier start time, later end time
+        if (plan.started && (!s.started || plan.started < s.started)) s.started = plan.started;
+        if (plan.ended && (!s.ended || plan.ended > s.ended)) s.ended = plan.ended;
+
+        // Recalculate duration from merged timestamps
+        if (s.started && s.ended) {
+            const start = new Date(s.started.replace(' ', 'T'));
+            const end = new Date(s.ended.replace(' ', 'T'));
+            if (!isNaN(start) && !isNaN(end)) {
+                s.total_duration_sec = Math.round((end - start) / 1000);
+            }
+        }
+
+        // Use plan session's first_question as summary (the original user intent)
+        s.first_question = plan.first_question || s.first_question;
+        if (plan.summary) s.summary = plan.summary;
+
+        // Keep track of merged session IDs for transcript linking
+        s._plan_session_id = planId;
+
+        // Recalculate cost and total tokens
+        s.cost = computeCost(s);
+        s.total_tokens = (Number(s.input_tokens) || 0) + (Number(s.output_tokens) || 0) + (Number(s.cache_read_tokens) || 0) + (Number(s.cache_creation_tokens) || 0);
+
+        planIds.add(planId);
+    }
+
+    // Remove plan sessions that were merged
+    sessions = sessions.filter(s => !planIds.has(s.session_id));
+}
+
+async function loadLineStats() {
+    const sql = `SELECT
+    data.sessionId::String AS session_id,
+    sumIf(
+        countSubstrings(block.input.new_string::String, char(10)) + 1,
+        block.type::String = 'tool_use' AND block.name::String = 'Edit' AND block.input.new_string::String != ''
+    ) + sumIf(
+        countSubstrings(block.input.content::String, char(10)) + 1,
+        block.type::String = 'tool_use' AND block.name::String = 'Write' AND block.input.content::String != ''
+    ) AS lines_added,
+    sumIf(
+        countSubstrings(block.input.old_string::String, char(10)) + 1,
+        block.type::String = 'tool_use' AND block.name::String = 'Edit' AND block.input.old_string::String != ''
+    ) AS lines_removed
+FROM claude_code.raw
+ARRAY JOIN data.message.content::Array(JSON) AS block
+WHERE data.type::String = 'assistant'
+    AND dynamicType(data.message.content) LIKE 'Array%'
+    AND block.type::String = 'tool_use'
+    AND block.name::String IN ('Edit', 'Write')
+GROUP BY session_id`;
+    return await queryClickHouse(sql);
+}
+
+// --- Session List ---
+async function loadSessions() {
+    const loading = document.getElementById('list-loading');
+    const errEl = document.getElementById('list-error');
+    loading.classList.remove('hidden');
+    errEl.classList.add('hidden');
+    try {
+        const sql = `SELECT
+    data.sessionId::String AS session_id,
+    replaceRegexpOne(path, '.*/projects/([^/]+)/.*', '\\\\1') AS project,
+    min(parseDateTime64BestEffortOrNull(data.timestamp::String)) AS started,
+    max(parseDateTime64BestEffortOrNull(data.timestamp::String)) AS ended,
+    dateDiff('second', started, ended) AS total_duration_sec,
+    countIf(data.type::String = 'user'
+        AND dynamicType(data.message.content) = 'String'
+        AND data.isMeta::Bool = false
+        AND NOT data.message.content::String LIKE 'Implement the following plan:%'
+        AND NOT data.message.content::String LIKE '[Request interrupted by user%'
+        AND NOT data.message.content::String LIKE '%This session is being continued from a previous conversation%'
+        AND NOT data.message.content::String LIKE '%<task-notification>%'
+    ) AS user_msgs,
+    countIf(data.type::String = 'assistant') AS assistant_msgs,
+    countIf(data.type::String = 'user') + countIf(data.type::String = 'assistant') AS all_msgs,
+    sum(data.message.usage.input_tokens::UInt64) AS input_tokens,
+    sum(data.message.usage.output_tokens::UInt64) AS output_tokens,
+    sum(data.message.usage.cache_read_input_tokens::UInt64) AS cache_read_tokens,
+    sum(data.message.usage.cache_creation_input_tokens::UInt64) AS cache_creation_tokens,
+    sumIf(data.durationMs::UInt32, data.type::String = 'system' AND data.subtype::String = 'turn_duration') AS api_duration_ms,
+    anyIf(data.summary::String, data.type::String = 'summary' AND data.summary::String != '') AS summary,
+    anyIf(data.message.model::String, data.type::String = 'assistant' AND data.message.model::String NOT IN ('', '<synthetic>')) AS model,
+    anyIf(data.gitBranch::String, data.gitBranch::String != '') AS git_branch,
+    argMinIf(
+        multiIf(
+            dynamicType(data.message.content) = 'String', data.message.content::String,
+            dynamicType(data.message.content) LIKE 'Array%', toJSONString(data.message.content::Array(JSON)),
+            ''
+        ),
+        parseDateTime64BestEffortOrNull(data.timestamp::String),
+        data.type::String = 'user' AND data.parentUuid::String = ''
+    ) AS first_question,
+    countIf(data.type::String = 'assistant' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.name::String = 'EnterPlanMode', data.message.content::Array(JSON))) AS plan_count,
+    countIf(data.type::String = 'system' AND data.subtype::String IN ('compact_boundary', 'microcompact_boundary')) AS compaction_count,
+    countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND (x.is_error::Bool = false OR dynamicType(x.is_error) = 'None'), data.message.content::Array(JSON))) AS approved_count,
+    countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND x.is_error::Bool = true AND x.content::String LIKE '%tool use was rejected%', data.message.content::Array(JSON))) AS rejected_count
+FROM claude_code.raw
+WHERE path NOT LIKE '%history.jsonl'
+GROUP BY session_id, project
+HAVING user_msgs > 0
+ORDER BY started DESC`;
+        const [sessionRows, lineRows] = await Promise.all([queryClickHouse(sql), loadLineStats()]);
+        sessions = sessionRows;
+        const lineMap = new Map(lineRows.map(r => [r.session_id, r]));
+        sessions.forEach(s => {
+            s.cost = computeCost(s);
+            s.total_tokens = (Number(s.input_tokens) || 0) + (Number(s.output_tokens) || 0) + (Number(s.cache_read_tokens) || 0) + (Number(s.cache_creation_tokens) || 0);
+            const ls = lineMap.get(s.session_id);
+            s.lines_added = ls ? Number(ls.lines_added) || 0 : 0;
+            s.lines_removed = ls ? Number(ls.lines_removed) || 0 : 0;
+        });
+        mergePlanSessions();
+        loading.classList.add('hidden');
+        renderSessionList();
+        updateStats();
+    } catch (e) {
+        loading.classList.add('hidden');
+        errEl.textContent = e.message;
+        errEl.classList.remove('hidden');
+    }
+}
+
+function updateStats() {
+    const bar = document.getElementById('stats-bar');
+    const total = sessions.length;
+    const totalCost = sessions.reduce((s, r) => s + r.cost, 0);
+    const totalTokens = sessions.reduce((s, r) => s + (r.total_tokens || 0), 0);
+    bar.innerHTML = `
+        <span><span class="value">${total}</span> sessions</span>
+        <span><span class="value">${formatNumber(totalTokens)}</span> tokens</span>
+        <span><span class="value">${formatCost(totalCost)}</span> total cost</span>
+    `;
+}
+
+function getFilteredSessions() {
+    let list = sessions;
+    if (fullTextSessionIds) {
+        list = list.filter(s => fullTextSessionIds.has(s.session_id));
+    }
+    return list;
+}
+
+function sortSessions(list) {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const col = sortCol;
+    return [...list].sort((a, b) => {
+        let va, vb;
+        if (col === 'summary') {
+            va = getSummaryText(a).toLowerCase();
+            vb = getSummaryText(b).toLowerCase();
+        } else if (col === 'cost') {
+            va = a.cost; vb = b.cost;
+        } else {
+            va = a[col]; vb = b[col];
+        }
+        // Numeric comparison
+        const na = Number(va), nb = Number(vb);
+        if (!isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+        // String comparison
+        if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb) * dir;
+        return 0;
+    });
+}
+
+function renderSessionList() {
+    const tbody = document.getElementById('session-tbody');
+    const filtered = sortSessions(getFilteredSessions());
+
+    // Update header classes
+    document.querySelectorAll('#session-table thead th').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.col === sortCol) {
+            th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        }
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="14" class="empty-state">No sessions found</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(s => {
+        const inTok = Number(s.input_tokens) || 0;
+        const outTok = Number(s.output_tokens) || 0;
+        const cacheRead = Number(s.cache_read_tokens) || 0;
+        const cacheCreate = Number(s.cache_creation_tokens) || 0;
+        const line1 = [];
+        if (inTok) line1.push(`\u2193${formatNumber(inTok)}`);
+        if (outTok) line1.push(`\u2191${formatNumber(outTok)}`);
+        const line2 = [];
+        if (cacheRead) line2.push(`\u21CA${formatNumber(cacheRead)}`);
+        if (cacheCreate) line2.push(`\u21C8${formatNumber(cacheCreate)}`);
+        const tokensDisplay = line1.join(' ') + (line2.length ? '<br><span style="color:var(--text-dim)">' + line2.join(' ') + '</span>' : '');
+        return `
+        <tr data-session="${escapeHtml(s.session_id)}">
+            <td><div class="col-summary-inner" title="${escapeHtml(getSummaryText(s))}">${escapeHtml(getSummaryText(s))}</div></td>
+            <td class="col-time">${formatTime(s.started)}</td>
+            <td class="col-duration align-right">${formatDuration(s.total_duration_sec)}</td>
+            <td class="col-duration align-right">${formatMs(s.api_duration_ms)}</td>
+            <td class="col-number align-right">${s.user_msgs}</td>
+            <td class="col-number align-right">${s.all_msgs}</td>
+            <td class="col-number align-right">${tokensDisplay}</td>
+            <td class="col-cost">${formatCost(s.cost)}</td>
+            <td class="col-number align-right">${Number(s.approved_count) || ''}</td>
+            <td class="col-number align-right">${Number(s.rejected_count) || ''}</td>
+            <td class="col-number align-right">${Number(s.plan_count) || ''}</td>
+            <td class="col-number align-right">${Number(s.compaction_count) || ''}</td>
+            <td class="col-number align-right">${s.lines_added || s.lines_removed ? `<span style="color:var(--green)">+${formatNumber(s.lines_added)}</span> <span style="color:var(--red)">\u2212${formatNumber(s.lines_removed)}</span>` : ''}</td>
+            <td class="col-model">${escapeHtml(shortModel(s.model))}</td>
+        </tr>`;
+    }).join('');
+}
+
+// Column sort
+document.querySelector('#session-table thead').addEventListener('click', e => {
+    const th = e.target.closest('th');
+    if (!th || !th.dataset.col) return;
+    const col = th.dataset.col;
+    if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortCol = col;
+        sortDir = (col === 'started' || col === 'total_duration_sec' || col === 'api_duration_ms' ||
+                   col === 'user_msgs' || col === 'all_msgs' || col === 'total_tokens' || col === 'cost' ||
+                   col === 'approved_count' || col === 'rejected_count' ||
+                   col === 'plan_count' || col === 'compaction_count' || col === 'lines_added')
+            ? 'desc' : 'asc';
+    }
+    renderSessionList();
+});
+
+// Row click
+document.getElementById('session-tbody').addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    if (!tr || !tr.dataset.session) return;
+    navigateTo('session/' + tr.dataset.session);
+});
+
+// Search — always queries ClickHouse for full-text search
+let searchTimeout = null;
+let searchAbort = null;
+document.getElementById('search-input').addEventListener('input', e => {
+    clearTimeout(searchTimeout);
+    searchText = e.target.value.trim();
+    if (!searchText) {
+        fullTextSessionIds = null;
+        renderSessionList();
+        return;
+    }
+    searchTimeout = setTimeout(() => fullTextSearch(searchText), 400);
+});
+
+async function fullTextSearch(query) {
+    if (searchAbort) searchAbort.abort();
+    const controller = new AbortController();
+    searchAbort = controller;
+    const escaped = query.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    try {
+        const sql = `SELECT DISTINCT data.sessionId::String AS session_id
+FROM claude_code.raw
+WHERE toString(data.message.content) ILIKE '%${escaped}%'
+   OR data.toolUseResult.content::String ILIKE '%${escaped}%'
+   OR data.toolUseResult.stdout::String ILIKE '%${escaped}%'
+   OR data.toolUseResult.stderr::String ILIKE '%${escaped}%'
+   OR data.summary::String ILIKE '%${escaped}%'`;
+        const resp = await fetch('http://localhost:8123/', {
+            method: 'POST',
+            body: sql + ' FORMAT JSON',
+            signal: controller.signal,
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const json = await resp.json();
+        const rows = json.data || [];
+        if (controller.signal.aborted) return;
+        fullTextSessionIds = new Set(rows.map(r => r.session_id));
+        renderSessionList();
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error('Full-text search failed:', e);
+    }
+}
+
+// --- Transcript View ---
+async function loadTranscript(sessionId) {
+    const loading = document.getElementById('transcript-loading');
+    const errEl = document.getElementById('transcript-error');
+    const container = document.getElementById('messages-container');
+    loading.classList.remove('hidden');
+    errEl.classList.add('hidden');
+    container.innerHTML = '';
+
+    // Check if this session has a merged plan session
+    const session = sessions.find(s => s.session_id === sessionId);
+    const sessionIds = [sessionId];
+    if (session && session._plan_session_id) sessionIds.push(session._plan_session_id);
+
+    const inClause = sessionIds.map(id => "'" + id.replace(/'/g, "\\'") + "'").join(',');
+    try {
+        const sql = `SELECT
+    data.sessionId::String AS sid,
+    data.type::String AS type,
+    parseDateTime64BestEffortOrNull(data.timestamp::String) AS ts,
+    data.uuid::String AS uuid,
+    data.parentUuid::String AS parent_uuid,
+    data.message.role::String AS role,
+    data.message.model::String AS model,
+    multiIf(
+        dynamicType(data.message.content) = 'String',
+        concat('[{"type":"text","text":', toJSONString(data.message.content::String), '}]'),
+        dynamicType(data.message.content) LIKE 'Array%',
+        toJSONString(data.message.content::Array(JSON)),
+        '[]'
+    ) AS content,
+    data.message.usage.input_tokens::UInt64 AS input_tokens,
+    data.message.usage.output_tokens::UInt64 AS output_tokens,
+    data.message.usage.cache_read_input_tokens::UInt64 AS cache_read_tokens,
+    data.message.usage.cache_creation_input_tokens::UInt64 AS cache_creation_tokens,
+    data.message.stop_reason::String AS stop_reason,
+    data.durationMs::UInt32 AS duration_ms,
+    data.subtype::String AS subtype,
+    data.summary::String AS summary,
+    data.gitBranch::String AS git_branch,
+    data.isSidechain::Bool AS is_sidechain,
+    data.isMeta::Bool AS is_meta,
+    data.toolUseResult.content::String AS tool_result_content,
+    data.toolUseResult.stdout::String AS tool_result_stdout,
+    data.toolUseResult.stderr::String AS tool_result_stderr
+FROM claude_code.raw
+WHERE data.sessionId::String IN (${inClause})
+ORDER BY ts`;
+        transcriptData = await queryClickHouse(sql);
+        loading.classList.add('hidden');
+        renderTranscriptMeta(sessionId);
+        renderTranscript();
+    } catch (e) {
+        loading.classList.add('hidden');
+        errEl.textContent = e.message;
+        errEl.classList.remove('hidden');
+    }
+}
+
+function renderTranscriptMeta(sessionId) {
+    const meta = document.getElementById('transcript-meta');
+    const session = sessions.find(s => s.session_id === sessionId);
+    if (!session) {
+        meta.innerHTML = `<span><span class="label">Session </span><span class="val">${escapeHtml(sessionId.slice(0,8))}...</span></span>`;
+        return;
+    }
+    meta.innerHTML = `
+        <span><span class="label">Project: </span><span class="val">${escapeHtml(session.project)}</span></span>
+        <span><span class="label">Started: </span><span class="val">${formatTime(session.started)}</span></span>
+        <span><span class="label">Duration: </span><span class="val">${formatDuration(session.total_duration_sec)}</span></span>
+        <span><span class="label">Model: </span><span class="val">${escapeHtml(shortModel(session.model))}</span></span>
+        <span><span class="label">Cost: </span><span class="val">${formatCost(session.cost)}</span></span>
+        ${session.git_branch ? `<span><span class="label">Branch: </span><span class="val">${escapeHtml(session.git_branch)}</span></span>` : ''}
+    `;
+}
+
+function getFilters() {
+    return {
+        user: document.getElementById('filter-user').checked,
+        assistant: document.getElementById('filter-assistant').checked,
+        thinking: document.getElementById('filter-thinking').checked,
+        tools: document.getElementById('filter-tools').checked,
+        results: document.getElementById('filter-results').checked,
+        agent: document.getElementById('filter-agent').checked,
+        skill: document.getElementById('filter-skill').checked,
+        plan: document.getElementById('filter-plan').checked,
+        interrupt: document.getElementById('filter-interrupt').checked,
+        continuation: document.getElementById('filter-continuation').checked,
+        progress: document.getElementById('filter-progress').checked,
+        system: document.getElementById('filter-system').checked,
+        sidechain: document.getElementById('filter-sidechain').checked,
+    };
+}
+
+function parseContentBlocks(contentStr) {
+    if (!contentStr || contentStr === '[]') return [];
+    try {
+        const parsed = JSON.parse(contentStr);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') return [{ type: 'text', text: parsed }];
+    } catch (e) {}
+    // Treat as plain text
+    return [{ type: 'text', text: contentStr }];
+}
+
+function renderToolInput(input) {
+    if (!input || typeof input !== 'object') return renderAnsi(String(input || ''));
+    const lines = [];
+    for (const [k, v] of Object.entries(input)) {
+        const val = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+        if (val.includes('\n') || val.length > 100) {
+            lines.push(`${k}:\n${val}`);
+        } else {
+            lines.push(`${k}: ${val}`);
+        }
+    }
+    return renderAnsi(lines.join('\n'));
+}
+
+function classifyMessage(msg) {
+    const blocks = parseContentBlocks(msg.content);
+    const isSidechain = msg.is_sidechain === true || msg.is_sidechain === 'true' || msg.is_sidechain === 1;
+
+    if (msg.type === 'summary') return { category: 'summary', blocks, isSidechain };
+    if (msg.type === 'system' && msg.subtype === 'turn_duration') return { category: 'skip', blocks, isSidechain };
+    if (msg.type === 'system') return { category: 'system', blocks, isSidechain };
+    if (msg.type === 'progress') return { category: 'progress', blocks, isSidechain };
+    if (msg.type !== 'user' && msg.type !== 'assistant') return { category: 'skip', blocks, isSidechain };
+
+    if (msg.type === 'assistant') {
+        // Count sub-block types
+        let hasText = false, thinkingCount = 0, toolUseCount = 0;
+        for (const b of blocks) {
+            if (b.type === 'thinking' && b.thinking) thinkingCount++;
+            else if (b.type === 'text' && b.text) hasText = true;
+            else if (b.type === 'tool_use') toolUseCount++;
+        }
+        return { category: 'assistant', blocks, isSidechain, hasText, thinkingCount, toolUseCount };
+    }
+
+    // User message subtypes
+    const isToolResult = blocks.length > 0 && blocks.every(b => b.type === 'tool_result');
+    const textContent = blocks.filter(b => b.type === 'text').map(b => b.text || '').join('');
+    const isAgentNotification = !isToolResult && /<task-notification>/.test(textContent);
+    const isMeta = msg.is_meta === true || msg.is_meta === 'true' || msg.is_meta === 1;
+    const isSkill = !isToolResult && !isAgentNotification && isMeta;
+    const isPlan = !isToolResult && !isAgentNotification && !isSkill && textContent.startsWith('Implement the following plan:');
+    const isInterrupt = !isToolResult && !isAgentNotification && !isSkill && !isPlan && /^\[Request interrupted by user/.test(textContent.trim());
+    const isContinuation = !isToolResult && !isAgentNotification && !isSkill && !isPlan && !isInterrupt && /This session is being continued from a previous conversation/.test(textContent);
+
+    let category = 'user';
+    if (isToolResult) category = 'tool_result';
+    else if (isAgentNotification) category = 'agent_notification';
+    else if (isSkill) category = 'skill';
+    else if (isPlan) category = 'plan';
+    else if (isInterrupt) category = 'interrupt';
+    else if (isContinuation) category = 'continuation';
+
+    return { category, blocks, isSidechain, isToolResult, isAgentNotification, isSkill, isPlan, isInterrupt, isContinuation };
+}
+
+function countMessages(data) {
+    const counts = { user: 0, assistant: 0, thinking: 0, tools: 0, results: 0, agent: 0, skill: 0, plan: 0, interrupt: 0, continuation: 0, progress: 0, system: 0, sidechain: 0 };
+    for (const msg of data) {
+        const cl = classifyMessage(msg);
+        if (cl.isSidechain) counts.sidechain++;
+        if (cl.category === 'assistant') {
+            if (cl.hasText) counts.assistant++;
+            counts.thinking += cl.thinkingCount;
+            counts.tools += cl.toolUseCount;
+        } else if (cl.category === 'tool_result') counts.results++;
+        else if (cl.category === 'user') counts.user++;
+        else if (cl.category === 'agent_notification') counts.agent++;
+        else if (cl.category === 'skill') counts.skill++;
+        else if (cl.category === 'plan') counts.plan++;
+        else if (cl.category === 'interrupt') counts.interrupt++;
+        else if (cl.category === 'continuation') counts.continuation++;
+        else if (cl.category === 'progress') counts.progress++;
+        else if (cl.category === 'system') counts.system++;
+    }
+    return counts;
+}
+
+function updateFilterLabels(counts) {
+    const labels = {
+        'filter-user': ['User', counts.user],
+        'filter-assistant': ['Assistant', counts.assistant],
+        'filter-thinking': ['Thinking', counts.thinking],
+        'filter-tools': ['Tool calls', counts.tools],
+        'filter-results': ['Tool results', counts.results],
+        'filter-agent': ['Agent notifications', counts.agent],
+        'filter-skill': ['Skills', counts.skill],
+        'filter-plan': ['Plans', counts.plan],
+        'filter-interrupt': ['Interruptions', counts.interrupt],
+        'filter-continuation': ['Continuations', counts.continuation],
+        'filter-progress': ['Progress', counts.progress],
+        'filter-system': ['System', counts.system],
+        'filter-sidechain': ['Sidechain', counts.sidechain],
+    };
+    for (const [id, [name, count]] of Object.entries(labels)) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement) {
+            el.parentElement.childNodes[1].textContent = ` ${name} (${count})`;
+        }
+    }
+}
+
+function renderTranscript() {
+    const container = document.getElementById('messages-container');
+    if (!transcriptData || transcriptData.length === 0) {
+        container.innerHTML = '<div class="empty-state">No messages in this session</div>';
+        return;
+    }
+
+    const counts = countMessages(transcriptData);
+    updateFilterLabels(counts);
+
+    const filters = getFilters();
+    const html = [];
+
+    for (const msg of transcriptData) {
+        const cl = classifyMessage(msg);
+
+        // Filter sidechain
+        if (cl.isSidechain && !filters.sidechain) continue;
+
+        // Filter by type
+        if (cl.category === 'progress' && !filters.progress) continue;
+        if (cl.category === 'system' && !filters.system) continue;
+        if (cl.category === 'skip') continue;
+
+        // Summary type
+        if (cl.category === 'summary' && msg.summary) {
+            html.push(`
+                <div class="summary-card">
+                    <div class="block-label">Session Summary</div>
+                    <div class="block-text">${escapeHtml(msg.summary)}</div>
+                </div>
+            `);
+            continue;
+        }
+
+        if (cl.category !== 'user' && cl.category !== 'assistant' && cl.category !== 'tool_result' && cl.category !== 'agent_notification' && cl.category !== 'skill' && cl.category !== 'plan' && cl.category !== 'interrupt' && cl.category !== 'continuation' && cl.category !== 'system' && cl.category !== 'progress') continue;
+
+        const blocks = cl.blocks;
+        const cardType = cl.category;
+
+        // Apply filters
+        if (cl.category === 'tool_result' && !filters.results) continue;
+        if (cl.category === 'agent_notification' && !filters.agent) continue;
+        if (cl.category === 'skill' && !filters.skill) continue;
+        if (cl.category === 'plan' && !filters.plan) continue;
+        if (cl.category === 'interrupt' && !filters.interrupt) continue;
+        if (cl.category === 'continuation' && !filters.continuation) continue;
+        if (cl.category === 'user' && !filters.user) continue;
+
+        const isSidechain = cl.isSidechain;
+        const roleLabelMap = { tool_result: 'tool result', agent_notification: 'agent notification', interrupt: 'interruption' };
+        const roleClass = cl.category;
+        const roleLabel = roleLabelMap[cl.category] || cl.category;
+
+        // Token display
+        let tokenInfo = '';
+        const inTok = Number(msg.input_tokens) || 0;
+        const outTok = Number(msg.output_tokens) || 0;
+        const cacheRead = Number(msg.cache_read_tokens) || 0;
+        if (inTok || outTok) {
+            const parts = [];
+            if (inTok) parts.push(`in: ${formatNumber(inTok)}`);
+            if (cacheRead) parts.push(`cache: ${formatNumber(cacheRead)}`);
+            if (outTok) parts.push(`out: ${formatNumber(outTok)}`);
+            tokenInfo = parts.join(' | ');
+        }
+
+        const sideTag = isSidechain ? '<span style="color:var(--orange)">[sidechain]</span>' : '';
+        const modelTag = msg.model && msg.model !== '<synthetic>' ? `<span class="msg-model">${escapeHtml(shortModel(msg.model))}</span>` : '';
+        const timeTag = `<span class="col-time">${formatTime(msg.ts)}</span>`;
+        const tokenTag = tokenInfo ? `<span class="msg-tokens">${tokenInfo}</span>` : '';
+
+        function emitCard(cType, rClass, rLabel, body, extraHeader) {
+            html.push(`<div class="message-card type-${cType}${isSidechain ? ' sidechain' : ''}"><div class="msg-header"><span class="msg-role ${rClass}">${escapeHtml(rLabel)}</span>${extraHeader || ''}${timeTag}${sideTag}${tokenTag}</div><div class="msg-body">${body}</div></div>`);
+        }
+
+        // For assistant messages, emit each block as its own card
+        if (msg.type === 'assistant') {
+            let textParts = [];
+            for (const block of blocks) {
+                if (block.type === 'thinking' && block.thinking) {
+                    // Flush accumulated text
+                    if (textParts.length && filters.assistant) {
+                        emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+                        textParts = [];
+                    }
+                    if (!filters.thinking) continue;
+                    emitCard('thinking', 'thinking', 'thinking', escapeHtml(block.thinking), modelTag);
+                } else if (block.type === 'text' && block.text) {
+                    if (ANSI_RE.test(block.text)) {
+                        textParts.push(`<div class="content-block block-text" style="white-space:pre-wrap">${renderAnsi(block.text)}</div>`);
+                    } else {
+                        textParts.push(`<div class="content-block block-text">${marked.parse(block.text)}</div>`);
+                    }
+                } else if (block.type === 'tool_use') {
+                    // Flush accumulated text
+                    if (textParts.length && filters.assistant) {
+                        emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+                        textParts = [];
+                    }
+                    if (!filters.tools) continue;
+                    emitCard('tool_use', 'tool_use', 'tool use: ' + (block.name || 'tool'), renderToolInput(block.input), modelTag);
+                }
+            }
+            // Flush remaining text
+            if (textParts.length && filters.assistant) {
+                emitCard('assistant', 'assistant', 'assistant', textParts.join(''), modelTag);
+            }
+            continue;
+        }
+
+        // Non-assistant messages: render as a single card
+        let bodyHtml = '';
+        for (const block of blocks) {
+            if (block.type === 'text' && block.text) {
+                if (ANSI_RE.test(block.text)) {
+                    bodyHtml += `<div class="content-block block-text" style="white-space:pre-wrap">${renderAnsi(block.text)}</div>`;
+                } else {
+                    bodyHtml += `<div class="content-block block-text">${marked.parse(block.text)}</div>`;
+                }
+            } else if (block.type === 'tool_result') {
+                if (!filters.results) continue;
+                const resultText = typeof block.content === 'string' ? block.content :
+                    Array.isArray(block.content) ? block.content.map(c => c.text || '').join('\n') :
+                    JSON.stringify(block.content);
+                bodyHtml += renderAnsi(resultText);
+            }
+        }
+
+        // For user messages with tool results from the row itself
+        if (msg.type === 'user' && (msg.tool_result_content || msg.tool_result_stdout || msg.tool_result_stderr)) {
+            if (filters.results) {
+                const parts = [msg.tool_result_content, msg.tool_result_stdout, msg.tool_result_stderr].filter(Boolean);
+                if (parts.length && !bodyHtml) {
+                    bodyHtml += renderAnsi(parts.join('\n'));
+                }
+            }
+        }
+
+        // Skip empty cards
+        if (!bodyHtml.trim()) continue;
+
+        emitCard(cardType, roleClass, roleLabel, bodyHtml);
+    }
+
+    container.innerHTML = html.join('') || '<div class="empty-state">No visible messages (adjust filters)</div>';
+}
+
+// Filter toggles
+document.getElementById('filters-bar').addEventListener('change', () => renderTranscript());
+
+// --- Navigation ---
+function navigateTo(hash) {
+    window.location.hash = hash;
+}
+
+function handleRoute() {
+    const hash = window.location.hash.slice(1);
+    const listView = document.getElementById('session-list-view');
+    const transcriptView = document.getElementById('transcript-view');
+
+    if (hash.startsWith('session/')) {
+        const sessionId = hash.slice(8);
+        listView.style.display = 'none';
+        transcriptView.style.display = 'block';
+        loadTranscript(sessionId);
+    } else {
+        listView.style.display = 'block';
+        transcriptView.style.display = 'none';
+    }
+}
+
+window.addEventListener('hashchange', handleRoute);
+document.getElementById('back-btn').addEventListener('click', () => navigateTo(''));
+
+// --- Init ---
+handleRoute();
+loadSessions();
+</script>
+</body>
+</html>
