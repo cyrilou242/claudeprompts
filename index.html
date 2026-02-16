@@ -1074,7 +1074,7 @@ WHERE toString(data.message.content) ILIKE '%${escaped}%'
    OR data.toolUseResult.stderr::String ILIKE '%${escaped}%'
    OR data.summary::String ILIKE '%${escaped}%'
 GROUP BY session_id`;
-        const resp = await fetch('http://localhost:8123/', {
+        const resp = await fetch(CH_URL, {
             method: 'POST',
             body: sql + ' FORMAT JSON',
             signal: controller.signal,
