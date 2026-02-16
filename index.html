@@ -51,7 +51,7 @@ header {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 12px 0;
+    padding: 0 0 12px 0;
     border-bottom: 1px solid var(--border);
     margin-bottom: 16px;
     flex-wrap: wrap;
@@ -215,6 +215,9 @@ tbody td {
     background: #111;
     border-bottom: 1px solid #222;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
 .filters-bar label {
@@ -250,10 +253,18 @@ tbody td {
 
 .term-block.sidechain { opacity: 0.5; }
 
+.term-content.expanded {
+    max-height: none !important;
+    overflow-y: auto !important;
+}
+
 /* User prompt */
 .term-block.type-user {
-    background: #111;
+    background: #222;
     font-size: 120%;
+    position: sticky;
+    top: var(--filters-height, 36px);
+    z-index: 10;
 }
 
 .term-block.type-user .term-prefix {
@@ -264,6 +275,13 @@ tbody td {
 .term-block.type-user .term-content {
     color: #fff;
     font-weight: bold;
+    max-height: 4.5em;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.term-block.type-assistant {
+    background: #112218;
 }
 
 .term-block.type-assistant .term-content {
@@ -279,7 +297,8 @@ tbody td {
     color: #555;
     font-style: italic;
     max-height: 400px;
-    overflow-y: auto;
+    overflow: hidden;
+    cursor: pointer;
 }
 
 .term-block.type-tool_use .term-prefix {
@@ -289,7 +308,8 @@ tbody td {
 .term-block.type-tool_use .term-content {
     color: #888;
     max-height: 300px;
-    overflow-y: auto;
+    overflow: hidden;
+    cursor: pointer;
 }
 
 /* Tool result */
@@ -304,12 +324,12 @@ tbody td {
 .term-block.type-tool_result .term-content {
     color: #666;
     max-height: 300px;
-    overflow-y: auto;
+    overflow: hidden;
+    cursor: pointer;
 }
 
-/* System / progress */
-.term-block.type-system .term-content,
-.term-block.type-progress .term-content {
+/* System */
+.term-block.type-system .term-content {
     color: #555;
     font-style: italic;
 }
@@ -455,19 +475,17 @@ tbody td {
             <div class="transcript-meta" id="transcript-meta"></div>
         </div>
         <div class="filters-bar" id="filters-bar">
+            <label><input type="checkbox" id="filter-all"> All</label>
             <label><input type="checkbox" id="filter-user" checked> User</label>
             <label><input type="checkbox" id="filter-assistant" checked> Assistant</label>
             <label><input type="checkbox" id="filter-thinking" checked> Thinking</label>
             <label><input type="checkbox" id="filter-tools" checked> Tool calls</label>
             <label><input type="checkbox" id="filter-results" checked> Tool results</label>
-            <label><input type="checkbox" id="filter-agent" checked> Agent notifications</label>
-            <label><input type="checkbox" id="filter-skill" checked> Skills</label>
+            <label><input type="checkbox" id="filter-agent"> Agent notifications</label>
+            <label><input type="checkbox" id="filter-skill"> Skills</label>
             <label><input type="checkbox" id="filter-plan" checked> Plans</label>
             <label><input type="checkbox" id="filter-interrupt" checked> Interruptions</label>
-            <label><input type="checkbox" id="filter-continuation" checked> Continuations</label>
-            <label><input type="checkbox" id="filter-progress"> Progress</label>
-            <label><input type="checkbox" id="filter-system"> System</label>
-            <label><input type="checkbox" id="filter-sidechain"> Sidechain</label>
+            <label><input type="checkbox" id="filter-continuation"> Continuations</label>
         </div>
         <div class="messages" id="messages-container"></div>
         <div id="transcript-loading" class="hidden" style="text-align:center;padding:40px;color:#555">Loading transcript...</div>
@@ -709,7 +727,7 @@ async function loadSessions() {
     try {
         const sql = `SELECT
     data.sessionId::String AS session_id,
-    replaceRegexpOne(path, '.*/projects/([^/]+)/.*', '\\\\1') AS project,
+    replaceAll(replaceRegexpOne(path, '.*/projects/([^/]+)/.*', '\\\\1'), '-', '/') AS project,
     min(parseDateTime64BestEffortOrNull(data.timestamp::String)) AS started,
     max(parseDateTime64BestEffortOrNull(data.timestamp::String)) AS ended,
     dateDiff('second', started, ended) AS total_duration_sec,
@@ -1018,9 +1036,6 @@ function getFilters() {
         plan: document.getElementById('filter-plan').checked,
         interrupt: document.getElementById('filter-interrupt').checked,
         continuation: document.getElementById('filter-continuation').checked,
-        progress: document.getElementById('filter-progress').checked,
-        system: document.getElementById('filter-system').checked,
-        sidechain: document.getElementById('filter-sidechain').checked,
     };
 }
 
@@ -1054,9 +1069,8 @@ function classifyMessage(msg) {
     const isSidechain = msg.is_sidechain === true || msg.is_sidechain === 'true' || msg.is_sidechain === 1;
 
     if (msg.type === 'summary') return { category: 'summary', blocks, isSidechain };
-    if (msg.type === 'system' && msg.subtype === 'turn_duration') return { category: 'skip', blocks, isSidechain };
-    if (msg.type === 'system') return { category: 'system', blocks, isSidechain };
-    if (msg.type === 'progress') return { category: 'progress', blocks, isSidechain };
+    if (msg.type === 'system') return { category: 'skip', blocks, isSidechain };
+    if (msg.type === 'progress') return { category: 'skip', blocks, isSidechain };
     if (msg.type !== 'user' && msg.type !== 'assistant') return { category: 'skip', blocks, isSidechain };
 
     if (msg.type === 'assistant') {
@@ -1092,10 +1106,9 @@ function classifyMessage(msg) {
 }
 
 function countMessages(data) {
-    const counts = { user: 0, assistant: 0, thinking: 0, tools: 0, results: 0, agent: 0, skill: 0, plan: 0, interrupt: 0, continuation: 0, progress: 0, system: 0, sidechain: 0 };
+    const counts = { user: 0, assistant: 0, thinking: 0, tools: 0, results: 0, agent: 0, skill: 0, plan: 0, interrupt: 0, continuation: 0 };
     for (const msg of data) {
         const cl = classifyMessage(msg);
-        if (cl.isSidechain) counts.sidechain++;
         if (cl.category === 'assistant') {
             if (cl.hasText) counts.assistant++;
             counts.thinking += cl.thinkingCount;
@@ -1107,8 +1120,6 @@ function countMessages(data) {
         else if (cl.category === 'plan') counts.plan++;
         else if (cl.category === 'interrupt') counts.interrupt++;
         else if (cl.category === 'continuation') counts.continuation++;
-        else if (cl.category === 'progress') counts.progress++;
-        else if (cl.category === 'system') counts.system++;
     }
     return counts;
 }
@@ -1125,9 +1136,6 @@ function updateFilterLabels(counts) {
         'filter-plan': ['Plans', counts.plan],
         'filter-interrupt': ['Interruptions', counts.interrupt],
         'filter-continuation': ['Continuations', counts.continuation],
-        'filter-progress': ['Progress', counts.progress],
-        'filter-system': ['System', counts.system],
-        'filter-sidechain': ['Sidechain', counts.sidechain],
     };
     for (const [id, [name, count]] of Object.entries(labels)) {
         const el = document.getElementById(id);
@@ -1200,9 +1208,6 @@ function renderTranscript() {
         const cl = classifyMessage(msg);
         const isSidechain = cl.isSidechain;
 
-        if (isSidechain && !filters.sidechain) continue;
-        if (cl.category === 'progress' && !filters.progress) continue;
-        if (cl.category === 'system' && !filters.system) continue;
         if (cl.category === 'skip') continue;
 
         // Summary
@@ -1211,7 +1216,7 @@ function renderTranscript() {
             continue;
         }
 
-        const validCategories = ['user','assistant','tool_result','agent_notification','skill','plan','interrupt','continuation','system','progress'];
+        const validCategories = ['user','assistant','tool_result','agent_notification','skill','plan','interrupt','continuation'];
         if (!validCategories.includes(cl.category)) continue;
 
         // Apply filters
@@ -1264,8 +1269,6 @@ function renderTranscript() {
             plan:               '\u25CB plan',
             interrupt:          '\u2716',
             continuation:       '\u2026',
-            system:             '\u2022',
-            progress:           '\u2022',
         };
         const prefix = prefixMap[cl.category] || '';
 
@@ -1294,10 +1297,31 @@ function renderTranscript() {
     }
 
     container.innerHTML = html.join('') || '<div style="color:#555;text-align:center;padding:60px 20px">No visible messages (adjust filters)</div>';
+    updateStickyOffset();
+}
+
+function updateStickyOffset() {
+    const bar = document.getElementById('filters-bar');
+    if (bar) document.getElementById('messages-container').style.setProperty('--filters-height', bar.offsetHeight + 'px');
 }
 
 // Filter toggles
-document.getElementById('filters-bar').addEventListener('change', () => renderTranscript());
+document.getElementById('filter-all').addEventListener('change', e => {
+    const checked = e.target.checked;
+    document.querySelectorAll('#filters-bar input[type="checkbox"]:not(#filter-all)').forEach(cb => cb.checked = checked);
+    renderTranscript();
+});
+document.getElementById('filters-bar').addEventListener('change', e => {
+    if (e.target.id !== 'filter-all') renderTranscript();
+});
+
+// Click to expand/collapse scrollable blocks
+document.getElementById('messages-container').addEventListener('click', e => {
+    const block = e.target.closest('.type-user, .type-thinking, .type-tool_use, .type-tool_result');
+    if (!block) return;
+    const content = block.querySelector('.term-content');
+    if (content) content.classList.toggle('expanded');
+});
 
 // --- Navigation ---
 function navigateTo(hash) {
@@ -1321,11 +1345,11 @@ function handleRoute() {
 }
 
 window.addEventListener('hashchange', handleRoute);
+window.addEventListener('resize', updateStickyOffset);
 document.getElementById('back-btn').addEventListener('click', () => navigateTo(''));
 
 // --- Init ---
-handleRoute();
-loadSessions();
+loadSessions().then(() => handleRoute());
 </script>
 </body>
 </html>
