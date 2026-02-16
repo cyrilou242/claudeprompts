@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alexey Prompts</title>
-<link rel="icon" type="image/jpeg" href="user.jpg">
+<link rel="icon" type="image/jpeg" href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAwADADASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAYCBQcDCP/EAC0QAAEDAwIFAgUFAAAAAAAAAAECAwQABRESIQYiMVGBE3FBYWKhwQcUI5LR/8QAFgEBAQEAAAAAAAAAAAAAAAAABAMF/8QAIBEAAgEEAgMBAAAAAAAAAAAAAQIAAwQREiFBEzFRkf/aAAwDAQACEQMRAD8AQCnm8VEpwDnYCiFJ5qEmp9aTCg+p6YmPhorAzgbb/esdBscTec6qTAnpyUOaUNFSc7rJwPHehk3VrIDzSmxjOsHUmttY/TbhiJFINtbfXjBckrUtSj3O+AfYUpcT8DWOPEcMWIIxQ2V6m3FfDuCSDSdaY4IhN6p5BETSnKgR2yDXMJ3Pmh7Itblv5uiVlKM9uv5o0J6+akw1YiJQ7qGlsoc3ijLVajcLzb5BCSiDNYccSfilSwnPg4NDKHOfajrVcnbVOU63o0OpDLuoHGgqBJ9xjNQRsMDKOuykTQnRxCi6hSHmhAx/I4p0qJ36enjA9waR78xfr7LuuJzZYjSHYoZCy2EJTjBIxzKIPxNP9xfkftklltx1sJJJZcCVJ3GFb9azibLuMS28TSpDzwEgh1C5OkLcURp5QABgbDNL7hQBrkxOs6dNqY266if7H/KNCdjUY8cRorLIB5EAHPfqfuTXUDY1FzliYlF1QA/JZkZXgdhXFD8N+6NWxdwix3nlaNby8IQfqV0Hn7Umzr/PlqUA76LR2CGttvmepqrI3x3q9Oz7cwdS/A4pj9noi62K72toP2S5IaIQAuNMQVN6sbqTjdIPXG43rILpeZkriTXfJTLgZyMMDU3qHTGPnQFs4w4gs8Yxod0fTGxj0HMONgdglWQPGKAuV0fur4dfQylYTpPpNhAPzOKQKXUL5x77ja2+zKGth1DifpP461LoDSENqt7ZeHGXQ1KcUtlW2pRyUHv7Ud7UgZU5i6d6GOHGJ//Z">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.2.1/ansi_up.js"></script>
 <style>
@@ -982,6 +982,31 @@ function renderSessionList() {
         return;
     }
 
+    // Compute max values for bar rendering
+    const barCols = {
+        total_duration_sec: s => Number(s.total_duration_sec) || 0,
+        api_duration_ms: s => Number(s.api_duration_ms) || 0,
+        user_msgs: s => Number(s.user_msgs) || 0,
+        all_msgs: s => Number(s.all_msgs) || 0,
+        total_tokens: s => Number(s.total_tokens) || 0,
+        cost: s => s.cost || 0,
+        approved_count: s => Number(s.approved_count) || 0,
+        rejected_count: s => Number(s.rejected_count) || 0,
+        plan_count: s => Number(s.plan_count) || 0,
+        compaction_count: s => Number(s.compaction_count) || 0,
+        lines: s => (Number(s.lines_added) || 0) + (Number(s.lines_removed) || 0),
+    };
+    const maxVals = {};
+    for (const [k, fn] of Object.entries(barCols)) {
+        maxVals[k] = Math.max(...filtered.map(fn), 1);
+    }
+    function bar(col, val) {
+        if (!val) return '';
+        const pct = Math.round(Math.sqrt(val / maxVals[col]) * 100);
+        if (pct < 1) return '';
+        return `background:linear-gradient(to right, rgba(124,156,255,0.12) ${pct}%, transparent ${pct}%)`;
+    }
+
     tbody.innerHTML = filtered.map(s => {
         const inTok = Number(s.input_tokens) || 0;
         const outTok = Number(s.output_tokens) || 0;
@@ -994,21 +1019,22 @@ function renderSessionList() {
         if (cacheRead) line2.push(`\u21CA${formatNumber(cacheRead)}`);
         if (cacheCreate) line2.push(`\u21C8${formatNumber(cacheCreate)}`);
         const tokensDisplay = line1.join(' ') + (line2.length ? '<br><span style="color:var(--text-dim)">' + line2.join(' ') + '</span>' : '');
+        const linesTotal = (Number(s.lines_added) || 0) + (Number(s.lines_removed) || 0);
         return `
         <tr data-session="${escapeHtml(s.session_id)}">
             <td><div class="col-summary-inner" title="${escapeHtml(getSummaryText(s))}">${escapeHtml(getSummaryText(s))}</div></td>
             <td class="col-time">${formatTime(s.started)}</td>
-            <td class="col-duration align-right">${formatDuration(s.total_duration_sec)}</td>
-            <td class="col-duration align-right">${formatMs(s.api_duration_ms)}</td>
-            <td class="col-number align-right">${s.user_msgs}</td>
-            <td class="col-number align-right">${s.all_msgs}</td>
-            <td class="col-number align-right">${tokensDisplay}</td>
-            <td class="col-cost">${formatCost(s.cost)}</td>
-            <td class="col-number align-right">${Number(s.approved_count) || ''}</td>
-            <td class="col-number align-right">${Number(s.rejected_count) || ''}</td>
-            <td class="col-number align-right">${Number(s.plan_count) || ''}</td>
-            <td class="col-number align-right">${Number(s.compaction_count) || ''}</td>
-            <td class="col-number align-right">${s.lines_added || s.lines_removed ? `<span style="color:var(--green)">+${formatNumber(s.lines_added)}</span> <span style="color:var(--red)">\u2212${formatNumber(s.lines_removed)}</span>` : ''}</td>
+            <td class="col-duration align-right" style="${bar('total_duration_sec', Number(s.total_duration_sec) || 0)}">${formatDuration(s.total_duration_sec)}</td>
+            <td class="col-duration align-right" style="${bar('api_duration_ms', Number(s.api_duration_ms) || 0)}">${formatMs(s.api_duration_ms)}</td>
+            <td class="col-number align-right" style="${bar('user_msgs', Number(s.user_msgs) || 0)}">${s.user_msgs}</td>
+            <td class="col-number align-right" style="${bar('all_msgs', Number(s.all_msgs) || 0)}">${s.all_msgs}</td>
+            <td class="col-number align-right" style="${bar('total_tokens', Number(s.total_tokens) || 0)}">${tokensDisplay}</td>
+            <td class="col-cost" style="${bar('cost', s.cost || 0)}">${formatCost(s.cost)}</td>
+            <td class="col-number align-right" style="${bar('approved_count', Number(s.approved_count) || 0)}">${Number(s.approved_count) || ''}</td>
+            <td class="col-number align-right" style="${bar('rejected_count', Number(s.rejected_count) || 0)}">${Number(s.rejected_count) || ''}</td>
+            <td class="col-number align-right" style="${bar('plan_count', Number(s.plan_count) || 0)}">${Number(s.plan_count) || ''}</td>
+            <td class="col-number align-right" style="${bar('compaction_count', Number(s.compaction_count) || 0)}">${Number(s.compaction_count) || ''}</td>
+            <td class="col-number align-right" style="${bar('lines', linesTotal)}">${s.lines_added || s.lines_removed ? `<span style="color:var(--green)">+${formatNumber(s.lines_added)}</span> <span style="color:var(--red)">\u2212${formatNumber(s.lines_removed)}</span>` : ''}</td>
             <td class="col-model">${escapeHtml(shortModel(s.model))}</td>
         </tr>`;
     }).join('');
@@ -1463,7 +1489,7 @@ function renderTranscript() {
 
         // User messages and subtypes
         const prefixMap = {
-            user:               '<img src="user.jpg" class="user-icon">',
+            user:               '<img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAwADADASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAYCBQcDCP/EAC0QAAEDAwIFAgUFAAAAAAAAAAECAwQABRESIQYiMVGBE3FBYWKhwQcUI5LR/8QAFgEBAQEAAAAAAAAAAAAAAAAABAMF/8QAIBEAAgEEAgMBAAAAAAAAAAAAAQIAAwQREiFBEzFRkf/aAAwDAQACEQMRAD8AQCnm8VEpwDnYCiFJ5qEmp9aTCg+p6YmPhorAzgbb/esdBscTec6qTAnpyUOaUNFSc7rJwPHehk3VrIDzSmxjOsHUmttY/TbhiJFINtbfXjBckrUtSj3O+AfYUpcT8DWOPEcMWIIxQ2V6m3FfDuCSDSdaY4IhN6p5BETSnKgR2yDXMJ3Pmh7Itblv5uiVlKM9uv5o0J6+akw1YiJQ7qGlsoc3ijLVajcLzb5BCSiDNYccSfilSwnPg4NDKHOfajrVcnbVOU63o0OpDLuoHGgqBJ9xjNQRsMDKOuykTQnRxCi6hSHmhAx/I4p0qJ36enjA9waR78xfr7LuuJzZYjSHYoZCy2EJTjBIxzKIPxNP9xfkftklltx1sJJJZcCVJ3GFb9azibLuMS28TSpDzwEgh1C5OkLcURp5QABgbDNL7hQBrkxOs6dNqY266if7H/KNCdjUY8cRorLIB5EAHPfqfuTXUDY1FzliYlF1QA/JZkZXgdhXFD8N+6NWxdwix3nlaNby8IQfqV0Hn7Umzr/PlqUA76LR2CGttvmepqrI3x3q9Oz7cwdS/A4pj9noi62K72toP2S5IaIQAuNMQVN6sbqTjdIPXG43rILpeZkriTXfJTLgZyMMDU3qHTGPnQFs4w4gs8Yxod0fTGxj0HMONgdglWQPGKAuV0fur4dfQylYTpPpNhAPzOKQKXUL5x77ja2+zKGth1DifpP461LoDSENqt7ZeHGXQ1KcUtlW2pRyUHv7Ud7UgZU5i6d6GOHGJ//Z" class="user-icon">',
             tool_result:        '',
             agent_notification: '\u25CB agent',
             skill:              '\u25CB skill',
@@ -1848,6 +1874,7 @@ function handleRoute() {
         listView.style.display = 'none';
         header.style.display = 'none';
         transcriptView.style.display = 'block';
+        window.scrollTo(0, 0);
         loadTranscript(sessionId);
     } else {
         listView.style.display = 'block';
