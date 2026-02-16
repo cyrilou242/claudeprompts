@@ -614,6 +614,13 @@ mark.search-hit.current { background: #f88; color: #000; }
 const ansiUp = new AnsiUp();
 
 const CH_URL = 'http://localhost:8123/';
+const CH_USER = 'ui';
+const CH_PASSWORD = '';
+
+function chHeaders() {
+    if (!CH_USER) return {};
+    return { 'Authorization': 'Basic ' + btoa(CH_USER + ':' + CH_PASSWORD) };
+}
 
 // Model pricing per million tokens
 const PRICING = {
@@ -651,6 +658,7 @@ function computeCost(row) {
 async function queryClickHouse(sql) {
     const resp = await fetch(CH_URL, {
         method: 'POST',
+        headers: chHeaders(),
         body: sql + '\nFORMAT JSON',
     });
     if (!resp.ok) {
@@ -1076,6 +1084,7 @@ WHERE toString(data.message.content) ILIKE '%${escaped}%'
 GROUP BY session_id`;
         const resp = await fetch(CH_URL, {
             method: 'POST',
+            headers: chHeaders(),
             body: sql + ' FORMAT JSON',
             signal: controller.signal,
         });
