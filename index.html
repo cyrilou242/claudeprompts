@@ -961,10 +961,22 @@ function sortByRelevance(list) {
     });
 }
 
+function classificationRank(s) {
+    if (s.agent_right) return 0;
+    if (s.user_corrected) return 1;
+    if (s.remarkable) return 2;
+    return 3;
+}
+
 function sortSessions(list) {
     const dir = sortDir === 'asc' ? 1 : -1;
     const col = sortCol;
+    const useDefaultSort = col === 'started' && sortDir === 'desc';
     return [...list].sort((a, b) => {
+        if (useDefaultSort) {
+            const ca = classificationRank(a), cb = classificationRank(b);
+            if (ca !== cb) return ca - cb;
+        }
         let va, vb;
         if (col === 'summary') {
             va = getSummaryText(a).toLowerCase();
