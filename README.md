@@ -56,3 +56,7 @@ Edit `index.html` around CH_URL, CH_USER, CH_PASSWORD with your database credent
 Optional: ask claude to run classification scripts and fill the classification table.
 
 Open `index.html`.
+
+### Do not share your sessions publicly
+
+The sessions contain tool calls and results, including fragments of arbitrary filess. They may contain sensisive info, that's why it's not recommended to share sessions publicly.
