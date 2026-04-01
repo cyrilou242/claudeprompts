@@ -900,7 +900,11 @@ WHERE path NOT LIKE '%history.jsonl'
 GROUP BY session_id, project
 HAVING user_msgs > 0
 ORDER BY started DESC`;
-        const [sessionRows, lineRows, classRows] = await Promise.all([queryClickHouse(sql), loadLineStats(), loadClassifications()]);
+        const [sessionRows, lineRows, classRows] = await Promise.all([
+            queryClickHouse(sql),
+            loadLineStats().catch(() => []),
+            loadClassifications().catch(() => [])
+        ]);
         sessions = sessionRows;
         const lineMap = new Map(lineRows.map(r => [r.session_id, r]));
         const classMap = new Map(classRows.map(r => [r.session_id, r]));
