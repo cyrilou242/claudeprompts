@@ -1,3 +1,5 @@
+## Read the blog: [https://clickhouse.com/blog/agentic-coding](https://clickhouse.com/blog/agentic-coding)
+
 ### Alexey Prompts
 
 A viewer of Claude Code sessions with ClickHouse backend.
