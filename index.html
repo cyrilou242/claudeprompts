@@ -58,12 +58,20 @@ header {
     flex-wrap: wrap;
 }
 
-header h1 {
+#user-switcher {
     font-size: 18px;
     font-weight: 600;
     color: var(--text-bright);
     white-space: nowrap;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
 }
+#user-switcher:hover { border-color: var(--accent); }
+#user-switcher option { background: var(--bg-surface); color: var(--text); }
 
 .search-box {
     flex: 1;
@@ -628,7 +636,7 @@ mark.search-hit.current { background: #f88; color: #000; }
 
 <div class="container" id="main-container" style="display:none;">
     <header>
-        <h1>Claude Prompts</h1>
+        <select id="user-switcher"><option value="__all__">All Prompts</option></select>
         <div class="search-box">
             <input type="text" id="search-input" placeholder="Search all message content...">
         </div>
@@ -748,6 +756,9 @@ function initLogin() {
         btn.disabled = true;
         btn.textContent = 'Connecting...';
         CH_URL = document.getElementById('login-url').value.trim();
+        if (CH_URL && !/^https?:\/\//i.test(CH_URL)) {
+            CH_URL = (/^localhost|^127\.|^\[::1\]/i.test(CH_URL) ? 'http://' : 'https://') + CH_URL;
+        }
         CH_USER = document.getElementById('login-user').value.trim();
         CH_PASSWORD = document.getElementById('login-password').value;
         CH_DATABASE = document.getElementById('login-database').value.trim();
@@ -833,6 +844,7 @@ let sortByUser = false; // true when user clicked a column header during search
 let searchText = '';
 let fullTextSessionIds = null; // null = no full-text filter; Map session_id -> relevance rank (lower = better)
 let transcriptData = null;
+let selectedUser = '__all__';
 
 // --- Formatting helpers ---
 function formatDuration(sec) {
@@ -1048,7 +1060,8 @@ async function loadSessions() {
     countIf(data.type::String = 'assistant' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.name::String = 'EnterPlanMode', data.message.content::Array(JSON))) AS plan_count,
     countIf(data.type::String = 'system' AND data.subtype::String IN ('compact_boundary', 'microcompact_boundary')) AS compaction_count,
     countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND (x.is_error::Bool = false OR dynamicType(x.is_error) = 'None'), data.message.content::Array(JSON))) AS approved_count,
-    countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND x.is_error::Bool = true AND x.content::String LIKE '%tool use was rejected%', data.message.content::Array(JSON))) AS rejected_count
+    countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND x.is_error::Bool = true AND x.content::String LIKE '%tool use was rejected%', data.message.content::Array(JSON))) AS rejected_count,
+    any(metadata.user::String) AS metadata_user
 FROM ${CH_DATABASE}.raw
 WHERE path NOT LIKE '%history.jsonl'
 GROUP BY session_id, project
@@ -1080,6 +1093,7 @@ ORDER BY started DESC`;
             s.sensitive_detail = cl ? cl.sensitive_detail || '' : '';
         });
         mergePlanSessions();
+        populateUserSwitcher();
         loading.classList.add('hidden');
         renderSessionList();
         updateStats();
@@ -1090,11 +1104,36 @@ ORDER BY started DESC`;
     }
 }
 
+function populateUserSwitcher() {
+    const sel = document.getElementById('user-switcher');
+    const users = [...new Set(sessions.map(s => s.metadata_user || '').filter(u => u))].sort();
+    const hasUntagged = sessions.some(s => !s.metadata_user);
+    sel.innerHTML = '';
+    const all = document.createElement('option');
+    all.value = '__all__';
+    all.textContent = 'All Prompts';
+    sel.appendChild(all);
+    if (hasUntagged) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Claude Prompts';
+        sel.appendChild(opt);
+    }
+    users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u;
+        opt.textContent = u + ' Prompts';
+        sel.appendChild(opt);
+    });
+    sel.value = selectedUser;
+}
+
 function updateStats() {
     const bar = document.getElementById('stats-bar');
-    const total = sessions.length;
-    const totalCost = sessions.reduce((s, r) => s + r.cost, 0);
-    const totalTokens = sessions.reduce((s, r) => s + (r.total_tokens || 0), 0);
+    const filtered = getFilteredSessions();
+    const total = filtered.length;
+    const totalCost = filtered.reduce((s, r) => s + r.cost, 0);
+    const totalTokens = filtered.reduce((s, r) => s + (r.total_tokens || 0), 0);
     bar.innerHTML = `
         <span><span class="value">${total}</span> sessions</span>
         <span><span class="value">${formatNumber(totalTokens)}</span> tokens</span>
@@ -1104,6 +1143,13 @@ function updateStats() {
 
 function getFilteredSessions() {
     let list = sessions;
+    if (selectedUser === '__all__') {
+        // show all
+    } else if (selectedUser) {
+        list = list.filter(s => (s.metadata_user || '') === selectedUser);
+    } else {
+        list = list.filter(s => !s.metadata_user);
+    }
     if (fullTextSessionIds) {
         list = list.filter(s => fullTextSessionIds.has(s.session_id));
     }
@@ -2075,6 +2121,11 @@ function handleRoute() {
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('resize', updateStickyOffset);
 document.getElementById('back-btn').addEventListener('click', () => navigateTo(''));
+document.getElementById('user-switcher').addEventListener('change', e => {
+    selectedUser = e.target.value;
+    renderSessionList();
+    updateStats();
+});
 
 // --- Init ---
 initLogin();

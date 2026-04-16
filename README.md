@@ -16,7 +16,8 @@ CREATE DATABASE IF NOT EXISTS claude_code;
 CREATE TABLE IF NOT EXISTS claude_code.raw
 (
     path String,
-    data JSON
+    data JSON,
+    metadata JSON
 )
 ENGINE = ReplacingMergeTree
 ORDER BY (data.sessionId::String, data.timestamp::String, data.uuid::String);
@@ -45,7 +46,7 @@ go build -o ingest ./cmd/ingest/
 ./ingest --once --host localhost --password 'your-password'
 ```
 
-**Run continuously** (default: scans every 30s):
+**Run continuously** (default: scans every 60s):
 
 ```bash
 ./ingest --host localhost --password 'your-password'
@@ -63,7 +64,8 @@ go build -o ingest ./cmd/ingest/
 | `-table` | `CH_TABLE` | `raw` | ClickHouse table |
 | `-secure` | `CH_SECURE` | off | Use TLS |
 | `-claude-dir` | `CLAUDE_DIR` | `~/.claude` | Claude data directory |
-| `-interval` | `SCAN_INTERVAL` | `30s` | Scan interval |
+| `-interval` | `SCAN_INTERVAL` | `1m` | Scan interval |
+| `-metadata` | `CH_METADATA` | `{}` | JSON metadata attached to every row |
 | `-once` | | `false` | Run once and exit |
 
 ### Auto-start on login (`.bash_profile` example)
@@ -74,11 +76,10 @@ Add this to your `~/.bash_profile` to build and start the ingestion tool in the 
 export CH_HOST=your-instance.clickhouse.cloud
 export CH_PASSWORD=your-password
 
-# Auto-start claudeprompts ingestion (skip if already running)
-if ! pgrep -f "claudeprompts/ingest" > /dev/null 2>&1; then
-    (cd /path/to/claudeprompts && go build -o ingest ./cmd/ingest/ 2>/dev/null && \
-     nohup ./ingest --host "$CH_HOST" --port 9440 --secure --password "$CH_PASSWORD" > /dev/null 2>&1 &)
-fi
+# Auto-start claudeprompts ingestion (lock file prevents duplicate instances)
+(cd /path/to/claudeprompts && go build -o ingest ./cmd/ingest/ 2>/dev/null && \
+ nohup ./ingest --host "$CH_HOST" --port 9440 --secure --password "$CH_PASSWORD" \
+   --metadata '{"user":"your-name"}' >> /tmp/claudeprompts-ingest.log 2>&1 &)
 ```
 
 For a local ClickHouse instance, use `--host localhost --port 9000` and drop `--secure`.
