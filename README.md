@@ -37,19 +37,19 @@ The Go tool in `cmd/ingest/` watches `~/.claude/` and continuously pipes new ses
 **Build:**
 
 ```bash
-go build -o ingest ./cmd/ingest/
+go build -o bin/ingest ./cmd/ingest/
 ```
 
 **Run once** (one-off upload):
 
 ```bash
-./ingest --once --host localhost --password 'your-password'
+bin/ingest --once --host localhost --password 'your-password'
 ```
 
-**Run continuously** (default: scans every 60s):
+**Run continuously** (default: scans every 10m):
 
 ```bash
-./ingest --host localhost --password 'your-password'
+bin/ingest --host localhost --password 'your-password'
 ```
 
 **Flags and environment variables:**
@@ -64,7 +64,7 @@ go build -o ingest ./cmd/ingest/
 | `-table` | `CH_TABLE` | `raw` | ClickHouse table |
 | `-secure` | `CH_SECURE` | off | Use TLS |
 | `-claude-dir` | `CLAUDE_DIR` | `~/.claude` | Claude data directory |
-| `-interval` | `SCAN_INTERVAL` | `1m` | Scan interval |
+| `-interval` | `SCAN_INTERVAL` | `10m` | Scan interval |
 | `-metadata` | `CH_METADATA` | `{}` | JSON metadata attached to every row |
 | `-once` | | `false` | Run once and exit |
 
@@ -77,8 +77,8 @@ export CH_HOST=your-instance.clickhouse.cloud
 export CH_PASSWORD=your-password
 
 # Auto-start claudeprompts ingestion (lock file prevents duplicate instances)
-(cd /path/to/claudeprompts && go build -o ingest ./cmd/ingest/ 2>/dev/null && \
- nohup ./ingest --host "$CH_HOST" --port 9440 --secure --password "$CH_PASSWORD" \
+(cd /path/to/claudeprompts && go build -o bin/ingest ./cmd/ingest/ 2>/dev/null && \
+ nohup bin/ingest --host "$CH_HOST" --port 9440 --secure --password "$CH_PASSWORD" \
    --metadata '{"user":"your-name"}' >> /tmp/claudeprompts-ingest.log 2>&1 &)
 ```
 

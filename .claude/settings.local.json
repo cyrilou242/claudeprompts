@@ -7,7 +7,16 @@
       "Bash(pkill -9 -f './ingest')",
       "Bash(go build:*)",
       "WebSearch",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(clickhouse client:*)",
+      "Bash(ps:*)",
+      "Bash(./ingest:*)",
+      "Read(//tmp/**)",
+      "Bash(kill 27875)",
+      "Bash(kill -9 27875)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(kill 77870)",
+      "Read(//Users/cyril/**)"
     ]
   }
 }
