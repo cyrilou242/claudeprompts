@@ -6,7 +6,8 @@
       "Bash(pkill -f './ingest --host')",
       "Bash(pkill -9 -f './ingest')",
       "Bash(go build:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)"
     ]
   }
 }
