@@ -5,7 +5,8 @@
       "Bash(pkill -f \"claudeprompts/ingest\")",
       "Bash(pkill -f './ingest --host')",
       "Bash(pkill -9 -f './ingest')",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "WebSearch"
     ]
   }
 }
