@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alexey Prompts</title>
-<link rel="icon" type="image/jpeg" href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAwADADASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAYCBQcDCP/EAC0QAAEDAwIFAgUFAAAAAAAAAAECAwQABRESIQYiMVGBE3FBYWKhwQcUI5LR/8QAFgEBAQEAAAAAAAAAAAAAAAAABAMF/8QAIBEAAgEEAgMBAAAAAAAAAAAAAQIAAwQREiFBEzFRkf/aAAwDAQACEQMRAD8AQCnm8VEpwDnYCiFJ5qEmp9aTCg+p6YmPhorAzgbb/esdBscTec6qTAnpyUOaUNFSc7rJwPHehk3VrIDzSmxjOsHUmttY/TbhiJFINtbfXjBckrUtSj3O+AfYUpcT8DWOPEcMWIIxQ2V6m3FfDuCSDSdaY4IhN6p5BETSnKgR2yDXMJ3Pmh7Itblv5uiVlKM9uv5o0J6+akw1YiJQ7qGlsoc3ijLVajcLzb5BCSiDNYccSfilSwnPg4NDKHOfajrVcnbVOU63o0OpDLuoHGgqBJ9xjNQRsMDKOuykTQnRxCi6hSHmhAx/I4p0qJ36enjA9waR78xfr7LuuJzZYjSHYoZCy2EJTjBIxzKIPxNP9xfkftklltx1sJJJZcCVJ3GFb9azibLuMS28TSpDzwEgh1C5OkLcURp5QABgbDNL7hQBrkxOs6dNqY266if7H/KNCdjUY8cRorLIB5EAHPfqfuTXUDY1FzliYlF1QA/JZkZXgdhXFD8N+6NWxdwix3nlaNby8IQfqV0Hn7Umzr/PlqUA76LR2CGttvmepqrI3x3q9Oz7cwdS/A4pj9noi62K72toP2S5IaIQAuNMQVN6sbqTjdIPXG43rILpeZkriTXfJTLgZyMMDU3qHTGPnQFs4w4gs8Yxod0fTGxj0HMONgdglWQPGKAuV0fur4dfQylYTpPpNhAPzOKQKXUL5x77ja2+zKGth1DifpP461LoDSENqt7ZeHGXQ1KcUtlW2pRyUHv7Ud7UgZU5i6d6GOHGJ//Z">
+<title>Claude Prompts</title>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.2.1/ansi_up.js"></script>
 <style>
@@ -535,12 +535,100 @@ mark.search-hit.current { background: #f88; color: #000; }
     padding: 60px 20px;
     color: var(--text-dim);
 }
+
+/* Login overlay */
+#login-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#login-overlay.hidden { display: none; }
+
+.login-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 32px;
+    width: 380px;
+    max-width: 90vw;
+}
+
+.login-box h2 {
+    color: var(--text-bright);
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.login-box label {
+    display: block;
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    margin-bottom: 14px;
+    outline: none;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.login-box input:focus { border-color: var(--accent); }
+
+.login-box button {
+    width: 100%;
+    padding: 8px;
+    background: var(--accent-dim);
+    border: none;
+    color: var(--text-bright);
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.login-box button:hover { background: var(--accent); }
+.login-box button:disabled { opacity: 0.5; cursor: default; }
+
+#login-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 10px;
+    display: none;
+}
 </style>
 </head>
 <body>
-<div class="container">
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>ClickHouse Connection</h2>
+        <label>URL</label>
+        <input type="text" id="login-url" value="http://localhost:8123/" placeholder="https://[your_instance].clickhouse.cloud:8443/">
+        <label>User</label>
+        <input type="text" id="login-user" value="default" placeholder="default">
+        <label>Password</label>
+        <input type="password" id="login-password" value="" placeholder="">
+        <label>Database</label>
+        <input type="text" id="login-database" value="claude_code" placeholder="claude_code">
+        <button id="login-btn">Connect</button>
+        <div id="login-error"></div>
+    </div>
+</div>
+
+<div class="container" id="main-container" style="display:none;">
     <header>
-        <h1>Alexey Prompts</h1>
+        <h1>Claude Prompts</h1>
         <div class="search-box">
             <input type="text" id="search-input" placeholder="Search all message content...">
         </div>
@@ -615,13 +703,79 @@ mark.search-hit.current { background: #f88; color: #000; }
 <script>
 const ansiUp = new AnsiUp();
 
-const CH_URL = 'http://localhost:8123/'
-const CH_USER = 'default';
-const CH_PASSWORD = '';
+let CH_URL = '';
+let CH_USER = '';
+let CH_PASSWORD = '';
+let CH_DATABASE = '';
 
 function chHeaders() {
     if (!CH_USER) return {};
     return { 'Authorization': 'Basic ' + btoa(CH_USER + ':' + CH_PASSWORD) };
+}
+
+async function testConnection() {
+    const resp = await fetch(CH_URL, {
+        method: 'POST',
+        headers: chHeaders(),
+        body: `SELECT 1 FROM ${CH_DATABASE}.raw LIMIT 1 FORMAT JSON`,
+    });
+    if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text.slice(0, 300));
+    }
+    await resp.json();
+}
+
+function initLogin() {
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-error');
+    const fields = ['login-url', 'login-user', 'login-password', 'login-database'];
+
+    // Restore from localStorage
+    const saved = localStorage.getItem('ch_connection');
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            document.getElementById('login-url').value = s.url || '';
+            document.getElementById('login-user').value = s.user || '';
+            document.getElementById('login-password').value = s.password || '';
+            document.getElementById('login-database').value = s.database || '';
+        } catch {}
+    }
+
+    async function doConnect() {
+        errEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Connecting...';
+        CH_URL = document.getElementById('login-url').value.trim();
+        CH_USER = document.getElementById('login-user').value.trim();
+        CH_PASSWORD = document.getElementById('login-password').value;
+        CH_DATABASE = document.getElementById('login-database').value.trim();
+        try {
+            await testConnection();
+            localStorage.setItem('ch_connection', JSON.stringify({
+                url: CH_URL, user: CH_USER, password: CH_PASSWORD, database: CH_DATABASE
+            }));
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('main-container').style.display = '';
+            loadSessions().then(() => handleRoute());
+        } catch (e) {
+            errEl.textContent = 'Connection failed: ' + e.message;
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Connect';
+        }
+    }
+
+    btn.addEventListener('click', doConnect);
+    fields.forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') doConnect();
+        });
+    });
+
+    // Auto-connect if we have saved credentials
+    if (saved) doConnect();
 }
 
 // Model pricing per million tokens
@@ -836,7 +990,7 @@ async function loadLineStats() {
         countSubstrings(block.input.old_string::String, char(10)) + 1,
         block.type::String = 'tool_use' AND block.name::String = 'Edit' AND block.input.old_string::String != ''
     ) AS lines_removed
-FROM claude_code.raw
+FROM ${CH_DATABASE}.raw
 ARRAY JOIN data.message.content::Array(JSON) AS block
 WHERE data.type::String = 'assistant'
     AND dynamicType(data.message.content) LIKE 'Array%'
@@ -847,7 +1001,7 @@ GROUP BY session_id`;
 }
 
 async function loadClassifications() {
-    const sql = `SELECT data.session_id::String AS session_id, data.remarkable::Bool AS remarkable, data.remarkable_reason::String AS remarkable_reason, data.user_corrected_agent::Bool AS user_corrected_agent, data.correction_detail::String AS correction_detail, data.agent_was_right::Bool AS agent_was_right, data.agent_right_detail::String AS agent_right_detail, data.sensitive_info::Bool AS sensitive_info, data.sensitive_detail::String AS sensitive_detail FROM claude_code.classification`;
+    const sql = `SELECT data.session_id::String AS session_id, data.remarkable::Bool AS remarkable, data.remarkable_reason::String AS remarkable_reason, data.user_corrected_agent::Bool AS user_corrected_agent, data.correction_detail::String AS correction_detail, data.agent_was_right::Bool AS agent_was_right, data.agent_right_detail::String AS agent_right_detail, data.sensitive_info::Bool AS sensitive_info, data.sensitive_detail::String AS sensitive_detail FROM ${CH_DATABASE}.classification`;
     return await queryClickHouse(sql);
 }
 
@@ -895,7 +1049,7 @@ async function loadSessions() {
     countIf(data.type::String = 'system' AND data.subtype::String IN ('compact_boundary', 'microcompact_boundary')) AS compaction_count,
     countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND (x.is_error::Bool = false OR dynamicType(x.is_error) = 'None'), data.message.content::Array(JSON))) AS approved_count,
     countIf(data.type::String = 'user' AND dynamicType(data.message.content) LIKE 'Array%' AND arrayExists(x -> x.type::String = 'tool_result' AND x.is_error::Bool = true AND x.content::String LIKE '%tool use was rejected%', data.message.content::Array(JSON))) AS rejected_count
-FROM claude_code.raw
+FROM ${CH_DATABASE}.raw
 WHERE path NOT LIKE '%history.jsonl'
 GROUP BY session_id, project
 HAVING user_msgs > 0
@@ -1136,7 +1290,7 @@ async function fullTextSearch(query) {
             AND toString(data.message.content) ILIKE '%${escaped}%', 3,
         4
     )) AS relevance
-FROM claude_code.raw
+FROM ${CH_DATABASE}.raw
 WHERE toString(data.message.content) ILIKE '%${escaped}%'
    OR data.toolUseResult.content::String ILIKE '%${escaped}%'
    OR data.toolUseResult.stdout::String ILIKE '%${escaped}%'
@@ -1206,7 +1360,7 @@ async function loadTranscript(sessionId) {
     data.toolUseResult.content::String AS tool_result_content,
     data.toolUseResult.stdout::String AS tool_result_stdout,
     data.toolUseResult.stderr::String AS tool_result_stderr
-FROM claude_code.raw
+FROM ${CH_DATABASE}.raw
 WHERE data.sessionId::String IN (${inClause})
 ORDER BY ts`;
         transcriptData = await queryClickHouse(sql);
@@ -1923,7 +2077,7 @@ window.addEventListener('resize', updateStickyOffset);
 document.getElementById('back-btn').addEventListener('click', () => navigateTo(''));
 
 // --- Init ---
-loadSessions().then(() => handleRoute());
+initLogin();
 </script>
 </body>
 </html>
